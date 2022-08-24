@@ -1,0 +1,484 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+    var recipeUrl = @Model.ApiUrl + "recipes";
+    var categoryUrl = @Model.ApiUrl + "categories";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Home Recipes</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <script src="//unpkg.com/alpinejs" defer></script>
+    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body background="/images/background.jpg" style="background-size: cover; background-attachment: fixed;">
+    <div x-data="{show:true}">
+        @*Navbar*@
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">Home Recipes</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarColor01">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" style="color:whitesmoke" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Recipes</a>
+                            <div class="dropdown-menu" x-data>
+                                <button class="dropdown-item" x-on:click="show = true">View Recipes</button>
+                                <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addRecipeModal">Add Recipe</button>
+                            </div>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" style="color:whitesmoke" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Categories</a>
+                            <div class="dropdown-menu" x-data>
+                                <button class="dropdown-item" x-on:click="show = false">View Categories</button>
+                                <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addCategoryModal">Add Category</button>
+                            </div>
+                        </li>
+                    </ul>
+                    <form class="d-flex">
+                        <input class="form-control me-sm-2" type="text" placeholder="Search">
+                        <button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
+                    </form>
+                </div>
+            </div>
+        </nav>
+
+        @*View Recipes*@
+        <div x-data x-show="show" class="container">
+            <h1 class="text-center my-4" style="color:white">Recipes</h1>
+            <div class="row row-cols-md-4 "
+                 x-data="
+                 {
+                 index:0,
+                 selectedRecipe:{id:'',title:'',ingredients:'',instructions:'',categories:[]},
+                 recipes: [],
+                 async init() {this.recipes = await getRecipes();}
+                }">
+                <template x-for="recipe in recipes">
+                    <div x-data="{cardRecipe:{},init(){this.cardRecipe = recipes[index++]}}">
+                        <div class="">
+                            <div class="card card text-white bg-primary mb-3" x-bind:id="`heading_${recipe.id}`">
+                                <div class="card-header">
+                                    <div class="d-grid">
+                                        <button class="btn btn-lg btn-primary" data-bs-toggle="collapse"
+                                                x-bind:data-bs-target="`#collapse_${recipe.id}`"
+                                                aria-expanded="false"
+                                                x-bind:aria-controls="`collapse_${recipe.id}`">
+                                            <h4><span x-text="recipe.title"></span></h4>
+                                        </button>
+                                    </div>
+                                    <template x-for="category in recipe.categories">
+                                        <span style="font-size:12px; margin-top:5px; margin-right: 5px;" class="badge rounded-pill bg-light" x-text="category"></span>
+                                    </template>
+                                </div>
+                            </div>
+                            <div x-bind:id="`collapse_${recipe.id}`" class="collapse"
+                                 x-bind:aria-labelledby="`heading_${recipe.id}`"
+                                 data-bs-parent="#accordion">
+                                <div class="list-group">
+                                    <div class="card-body text-dark list-group-item">
+                                        <h5 class="card-title">Instructions</h5>
+                                        <ol class="list-group list-group-numbered">
+                                            <template x-for="instruction in recipe.instructions">
+                                                <li class="list-group-item" x-text="instruction"></li>
+                                            </template>
+                                        </ol>
+                                    </div>
+                                    <div class="card-body text-dark list-group-item">
+                                        <h5 class="card-title">Ingredients</h5>
+                                        <ol class="list-group">
+                                            <template x-for="ingredient in recipe.ingredients">
+                                                <ui class="list-group-item"><span x-text="ingredient"></span></ui>
+                                            </template>
+                                        </ol>
+                                    </div>
+                                    <button x-on:click="selectedRecipe = {...cardRecipe};
+                                                    selectedRecipe.ingredients=selectedRecipe.ingredients.join('\n');
+                                                    selectedRecipe.instructions=selectedRecipe.instructions.join('\n');"
+                                            data-bs-toggle="modal" data-bs-target="#editRecipeModal"
+                                            type="button" class="btn btn btn-secondary">
+                                        Edit
+                                    </button>
+                                    <button x-on:click="selectedRecipe={...cardRecipe}"
+                                            data-bs-toggle="modal" data-bs-target="#deleteRecipeModal"
+                                            type="button" class="btn btn btn-danger">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                @*Modal for Delete Recipe*@
+                <div class="modal fade" id="deleteRecipeModal" tabindex="-1" aria-labelledby="deleteRecipeLabel" aria-hidden="true" x-transition>
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="deleteRecipeLabel">Delete Recipe</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="deleteRecipe-form" x-on:submit="await deleteRecipe(selectedRecipe)">
+                                    <p>Are you sure you want to delete <span x-text="selectedRecipe.title"></span></p>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="submit" form="deleteRecipe-form" class="btn btn-danger">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @*Modal for Edit Recipe*@
+                <div class="modal fade" id="editRecipeModal" tabindex="-1" aria-labelledby="editRecipeLabel" aria-hidden="true" x-transition>
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="editRecipeLabel">Edit Recipe</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div x-data="
+                                     {
+                                     allCategories:[],
+                                     newInstructions:'',
+                                     newIngredients:'',
+                                     async init() {this.allCategories = await getCategories()}
+                                    }">
+                                    <form id="editRecipe-form"
+                                          x-on:submit="await editRecipe(selectedRecipe)">
+                                        <div class="form-floating mb-3">
+                                            <input x-model="selectedRecipe.title"
+                                                   type="text" class="form-control" id="title-text">
+                                            <label for="title-text" class="col-form-label">Title</label>
+                                        </div>
+                                        <div class="form-floating mb-3">
+                                            <textarea x-model="selectedRecipe.ingredients"
+                                                      class="form-control" id="ingredients-text" minlength="5"></textarea>
+                                            <label for="ingredients-text" class="col-form-label">Ingredients</label>
+                                        </div>
+                                        <div class="form-floating mb-3">
+                                            <textarea x-model="selectedRecipe.instructions"
+                                                      class="form-control" id="Instructions-text" minlength="5"></textarea>
+                                            <label for="instructions-text" class="col-form-label">Instructions</label>
+                                        </div>
+                                        <div>
+                                            <label class="col-form-label">Categories</label>
+                                            <select x-model="selectedRecipe.categories" id="categoriesSelect"
+                                                    class="form-select" multiple aria-label="multiple select example">
+                                                <template x-for="category in allCategories">
+                                                    <option x-bind:value="category" x-bind:selected="selectedRecipe.categories.includes(category)?true:false"
+                                                            x-bind:label="category"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="submit" form="editRecipe-form" class="btn btn-danger">Edit</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        @*categories view*@
+        <div x-show="!show" x-data="{
+            allCategories:[],
+            index:0,
+            selectedCategory:'',
+            async init(){this.allCategories = await getCategories();}
+            }">
+            <h1 class="text-center my-4" style="color:white">Categories</h1>
+            <div x-data class="container">
+                <div class="row row-cols-auto justify-content-center g-4">
+                    <template x-for="category in allCategories">
+                        <div class="col" x-data="{cardCategory:'',init(){this.cardCategory = allCategories[index++]}}">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="card-title"><span x-text="category"></span></h5>
+                                    <div class="btn-group">
+                                        <button x-on:click="selectedCategory = cardCategory"
+                                                data-bs-toggle="modal" data-bs-target="#editCategoryModal" class="btn btn-primary">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button x-on:click="selectedCategory = cardCategory"
+                                                data-bs-toggle="modal" data-bs-target="#deleteCategoryModal" class="btn btn-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            @*Modal for Delete Category*@
+            <div class="modal fade" id="deleteCategoryModal" tabindex="-1" aria-labelledby="deleteCategoryLabel" aria-hidden="true" x-transition>
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deleteCategoryLabel">Delete Category</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="deleteCategory-form" x-on:submit="await deleteCategory(selectedCategory)">
+                                <p>Are you sure you want to delete <span x-text="selectedCategory"></span></p>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" form="deleteCategory-form" class="btn btn-danger">Delete</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @*Modal for edit Category*@
+            <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryLabel" aria-hidden="true" x-transition>
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editCategoryLabel">Edit Category</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body" x-data="{newCategory:''}">
+                            <form id="editCategory-form" x-on:submit.prevent="await editCategory(selectedCategory,newCategory)">
+                                <div class="form-floating mb-3">
+                                    <input x-model="newCategory" type="text" class="form-control" id="category-text">
+                                    <label for="category-text" class="col-form-label">New title for "<span x-text="selectedCategory"></span>"</label>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" form="editCategory-form" class="btn btn-danger">Edit</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @*Modal for Add Recipe*@
+    <div class="modal fade" id="addRecipeModal" tabindex="-1" aria-labelledby="addRecipeModalLabel" aria-hidden="true" x-transition>
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Add Recipe</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div x-data="
+                         {
+                         allCategories:[],
+                         recipe:{Title:'',Ingredients:'',Instructions:'',Categories:[]},
+                         async init() {this.allCategories = await getCategories();}
+                        }">
+                        <form id="addRecipe-form"
+                              x-on:submit="await addRecipe(recipe);">
+                            <div class="form-floating mb-3">
+                                <input x-model="recipe.Title" type="text" class="form-control" id="title-text" placeholder="Scrambled Eggs">
+                                <label for="title-text" class="col-form-label">Title</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <textarea x-model="recipe.Ingredients"
+                                          class="form-control" id="ingredients-text" minlength="5"></textarea>
+                                <label for="ingredients-text" class="col-form-label">Ingredients</label>
+                            </div>
+                            <div class="form-floating mb-3">
+                                <textarea x-model="recipe.Instructions"
+                                          class="form-control" id="Instructions-text" minlength="5"></textarea>
+                                <label for="instructions-text" class="col-form-label">Instructions</label>
+                            </div>
+                            <div>
+                                <label class="col-form-label">Categories</label>
+                                <select x-model="recipe.Categories" id="categoriesSelect"
+                                        class="form-select" multiple aria-label="multiple select example">
+                                    <template x-for="category in allCategories">
+                                        <option x-bind:value="category" x-bind:label="category"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" form="addRecipe-form" class="btn btn-primary">Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @*Modal for Add Category*@
+    <div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true" x-transition>
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Category</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div x-data=" {category:''}">
+                        <form id="addCategory-form"
+                              x-on:submit.prevent="await addCategory(category)">
+                            <div class="mb-3">
+                                <label for="category-text" class="col-form-label">Category Name</label>
+                                <input x-model="category" type="text" class="form-control" id="category-text">
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" form="addCategory-form" class="btn btn-primary">Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        async function getRecipes() {
+            let data = await fetch('@recipeUrl', { method: 'GET'})
+                .then(response => response.json())
+            data.forEach(recipe => {
+                recipe.ingredients = recipe.ingredients.split('\n');
+                recipe.instructions = recipe.instructions.split('\n');
+            });
+            return data;
+        }
+
+        async function getCategories() {
+            let categories = await fetch('@categoryUrl', { method: 'GET'})
+                .then(response => response.json());
+            return categories;
+        }
+
+        async function addRecipe(recipe) {
+            console.log(recipe);
+            await fetch(`@recipeUrl`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(recipe),
+            })
+                .then(response =>
+                    response.json())
+                .then(data => {
+                    console.log('Success:', data);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+        }
+
+        async function addCategory(category) {
+            fetch(`https://localhost:7182/categories?category=${category}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+                .then(response =>
+                    response.json())
+                .then(data => {
+                    console.log('Success:', data);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+        }
+
+        async function deleteRecipe(recipe) {
+            fetch(`@recipeUrl/${recipe.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+                .then(response =>
+                    response.json())
+                .then(data => {
+                    console.log('Success:', data);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+        }
+
+        async function deleteCategory(category) {
+            fetch(`@categoryUrl/?category=${category}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+                .then(response =>
+                    response.json())
+                .then(data => {
+                    console.log('Success:', data);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+        }
+
+        async function editRecipe(recipe) {
+            fetch(`@recipeUrl/${recipe.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(recipe),
+            })
+                .then(response =>
+                    response.json())
+                .then(data => {
+                    console.log('Success:', data);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+
+        }
+
+        async function editCategory(category, newCategory) {
+            fetch(`@categoryUrl/?category=${category}&newCategory=${newCategory}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+                .then(response =>
+                    response.json())
+                .then(data => {
+                    console.log('Success:', data);
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+        }
+    </script>
+</body>
+</html>
