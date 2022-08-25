@@ -1,10 +1,9 @@
 ﻿@page
 @inject IConfiguration Config;
-@model IndexModel
 @{
     ViewData["Title"] = "Home page";
-    var recipeUrl = Config["url"] + "recipes";
-    var categoryUrl = Config["url"] + "categories";
+    var recipeUrl = Config["url"] + "/recipes";
+    var categoryUrl = Config["url"] + "/categories";
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -362,7 +361,7 @@
 
     <script type="text/javascript">
         async function fetchToken() {
-            const response = await fetch("@Config["url"]antiforgery", {
+            const response = await fetch("@Config["url"]/antiforgery", {
                 method: "GET",
                 credentials: 'include'
             });
@@ -378,7 +377,7 @@
 
         async function getRecipes() {
             const antiforgery = await getTokenFromPage();
-            let data = await await fetch("@Config["url"]recipes", {
+            let data = await fetch("@Config["url"]/recipes", {
                 method: "GET",
                 headers: {
                     "X-XSRF-TOKEN": antiforgery,
@@ -395,17 +394,26 @@
         }
 
         async function getCategories() {
-            let categories = await fetch('@categoryUrl', { method: 'GET' })
+            const antiforgery = await getTokenFromPage();
+            let categories = await fetch('@Config["url"]/categories', {
+                method: 'GET',
+                headers: {
+                    "X-XSRF-TOKEN": antiforgery,
+                    "Content-Type": "application/json"
+                },
+                credentials: 'include'
+            })
                 .then(response => response.json());
             return categories;
         }
 
         async function addRecipe(recipe) {
-            console.log(recipe);
-            await fetch(`@recipeUrl`, {
+            const antiforgery = await getTokenFromPage();
+            await fetch(`@Config["url"]/recipes`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    "X-XSRF-TOKEN": antiforgery,
                 },
                 body: JSON.stringify(recipe),
             })
@@ -420,10 +428,12 @@
         }
 
         async function addCategory(category) {
-            fetch(`https://localhost:7182/categories?category=${category}`, {
+            const antiforgery = await getTokenFromPage();
+            fetch(`@Config["url"]/categories?category=${category}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    "X-XSRF-TOKEN": antiforgery,
                 }
             })
                 .then(response =>
@@ -437,10 +447,12 @@
         }
 
         async function deleteRecipe(recipe) {
-            fetch(`@recipeUrl/${recipe.id}`, {
+            const antiforgery = await getTokenFromPage();
+            fetch(`@Config["url"]/recipes/${recipe.id}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
+                    "X-XSRF-TOKEN": antiforgery,
                 }
             })
                 .then(response =>
@@ -454,10 +466,12 @@
         }
 
         async function deleteCategory(category) {
-            fetch(`@categoryUrl/?category=${category}`, {
+            const antiforgery = await getTokenFromPage();
+            fetch(`@Config["url"]/categories/?category=${category}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
+                    "X-XSRF-TOKEN": antiforgery,
                 }
             })
                 .then(response =>
@@ -471,10 +485,12 @@
         }
 
         async function editRecipe(recipe) {
-            fetch(`@recipeUrl/${recipe.id}`, {
+            const antiforgery = await getTokenFromPage();
+            fetch(`@Config["url"]/recipes/${recipe.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    "X-XSRF-TOKEN": antiforgery,
                 },
                 body: JSON.stringify(recipe),
             })
@@ -490,10 +506,12 @@
         }
 
         async function editCategory(category, newCategory) {
-            fetch(`@categoryUrl/?category=${category}&newCategory=${newCategory}`, {
+            const antiforgery = await getTokenFromPage();
+            fetch(`@Config["url"]/categories/?category=${category}&newCategory=${newCategory}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    "X-XSRF-TOKEN": antiforgery,
                 }
             })
                 .then(response =>
