@@ -361,25 +361,31 @@
     </div>
 
     <script type="text/javascript">
-        async function getToken() {
-            const response = await fetch("@Config["url"]/antiforgery", {
+        async function fetchToken() {
+            const response = await fetch("@Config["url"]antiforgery", {
                 method: "GET",
                 credentials: 'include'
             });
-            if (response.ok) {
-                const xsrfToken = document.cookie
-                    .split("; ")
-                    .find(row => row.startsWith("XSRF-TOKEN="))
-                    .split("=")[1];
-                return xsrfToken;
-            }
-            else {
-                return null;
-            }
+        }
+
+        async function getTokenFromPage() {
+            const xsrfToken = document.cookie
+                .split("; ")
+                .find(row => row.startsWith("XSRF-TOKEN="))
+                .split("=")[1];
+            return xsrfToken;
         }
 
         async function getRecipes() {
-            let data = await fetch('@recipeUrl', { method: 'GET' })
+            const antiforgery = await getTokenFromPage();
+            let data = await await fetch("@Config["url"]recipes", {
+                method: "GET",
+                headers: {
+                    "X-XSRF-TOKEN": antiforgery,
+                    "Content-Type": "application/json"
+                },
+                credentials: 'include'
+            })
                 .then(response => response.json())
             data.forEach(recipe => {
                 recipe.ingredients = recipe.ingredients.split('\n');
@@ -499,6 +505,7 @@
                     console.error('Error:', error);
                 });
         }
+        window.onload = fetchToken;
     </script>
 </body>
 </html>

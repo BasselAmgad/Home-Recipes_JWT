@@ -6,21 +6,28 @@ var builder = WebApplication.CreateBuilder(args);
 using IHost host = Host.CreateDefaultBuilder(args).Build();
 IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
 
-builder.Services.AddCors();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: "localhostOnly",
+                      policy =>
+                      {
+                          policy.WithOrigins(builder.Configuration["clientUrl"])
+                                .AllowAnyHeader()
+                                .AllowAnyMethod()
+                                .AllowCredentials();
+                      });
+});
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddAntiforgery();
+builder.Services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
 
 var app = builder.Build();
 
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseHttpsRedirection();
-
-app.UseCors(
-    options => options.WithOrigins(config.GetValue<string>("clientUrl")).AllowAnyMethod().AllowAnyHeader()
-    );
+app.UseCors("localhostOnly");
 
 app.UseSwaggerUI(options =>
 {
@@ -28,17 +35,25 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = string.Empty;
 });
 
-app.MapGet("/antiforgery", (IAntiforgery antiforgery, HttpContext context) =>
+app.MapGet("antiforgery", (IAntiforgery antiforgery, HttpContext context) =>
 {
     var tokens = antiforgery.GetAndStoreTokens(context);
     context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions { HttpOnly = false });
 });
 
-app.MapGet("recipes", async () =>
+app.MapGet("recipes", async (HttpContext context, IAntiforgery antiforgery) =>
 {
-    Data data = new(app.Logger);
-    var recipes = await data.GetRecipesAsync();
-    return Results.Ok(recipes);
+    try
+    {
+        await antiforgery.ValidateRequestAsync(context);
+        Data data = new(app.Logger);
+        var recipes = await data.GetRecipesAsync();
+        return Results.Ok(recipes);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex?.Message ?? string.Empty);
+    }
 });
 
 app.MapGet("/recipes/{id}", async (Guid id) =>
@@ -53,13 +68,13 @@ app.MapPost("/recipes", async (Recipe recipe) =>
     Data data = new(app.Logger);
     recipe.Id = Guid.NewGuid();
     await data.AddRecipeAsync(recipe);
-    return Results.Created($"/recipes/{recipe.Id}",recipe);
+    return Results.Created($"/recipes/{recipe.Id}", recipe);
 });
-    
+
 app.MapPut("/recipes/{id}", async (Guid id, Recipe newRecipe) =>
 {
     Data data = new(app.Logger);
-    var updatedRecipe =await data.EditRecipeAsync(id, newRecipe);
+    var updatedRecipe = await data.EditRecipeAsync(id, newRecipe);
     return Results.Ok(updatedRecipe);
 });
 
@@ -82,7 +97,7 @@ app.MapPost("/categories", async (string category) =>
 {
     Data data = new(app.Logger);
     await data.AddCategoryAsync(category);
-    return Results.Created($"/categories/{category}",category);
+    return Results.Created($"/categories/{category}", category);
 });
 
 app.MapPut("/categories", async (string category, string newCategory) =>
@@ -99,17 +114,17 @@ app.MapDelete("/categories", async (string category) =>
     return Results.Ok();
 });
 
-app.MapPost("recipes/category", async (Guid id ,string category) =>
+app.MapPost("recipes/category", async (Guid id, string category) =>
 {
     Data data = new(app.Logger);
-    await data.AddCategoryToRecipeAsync(id,category);
-    return Results.Created($"recipes/category/{category}",category);
+    await data.AddCategoryToRecipeAsync(id, category);
+    return Results.Created($"recipes/category/{category}", category);
 });
 
 app.MapDelete("recipes/category", async (Guid id, string category) =>
 {
     Data data = new(app.Logger);
-    await data.RemoveCategoryFromRecipeAsync(id,category);
+    await data.RemoveCategoryFromRecipeAsync(id, category);
     return Results.Ok();
 });
 
