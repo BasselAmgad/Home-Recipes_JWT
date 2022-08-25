@@ -1,9 +1,10 @@
 ﻿@page
+@inject IConfiguration Config;
 @model IndexModel
 @{
     ViewData["Title"] = "Home page";
-    var recipeUrl = @Model.ApiUrl + "recipes";
-    var categoryUrl = @Model.ApiUrl + "categories";
+    var recipeUrl = Config["url"] + "recipes";
+    var categoryUrl = Config["url"] + "categories";
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -21,6 +22,7 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
+
 <body background="/images/background.jpg" style="background-size: cover; background-attachment: fixed;">
     <div x-data="{show:true}">
         @*Navbar*@
@@ -278,6 +280,7 @@
             </div>
         </div>
     </div>
+
     @*Modal for Add Recipe*@
     <div class="modal fade" id="addRecipeModal" tabindex="-1" aria-labelledby="addRecipeModalLabel" aria-hidden="true" x-transition>
         <div class="modal-dialog">
@@ -358,8 +361,25 @@
     </div>
 
     <script type="text/javascript">
+        async function getToken() {
+            const response = await fetch("@Config["url"]/antiforgery", {
+                method: "GET",
+                credentials: 'include'
+            });
+            if (response.ok) {
+                const xsrfToken = document.cookie
+                    .split("; ")
+                    .find(row => row.startsWith("XSRF-TOKEN="))
+                    .split("=")[1];
+                return xsrfToken;
+            }
+            else {
+                return null;
+            }
+        }
+
         async function getRecipes() {
-            let data = await fetch('@recipeUrl', { method: 'GET'})
+            let data = await fetch('@recipeUrl', { method: 'GET' })
                 .then(response => response.json())
             data.forEach(recipe => {
                 recipe.ingredients = recipe.ingredients.split('\n');
@@ -369,7 +389,7 @@
         }
 
         async function getCategories() {
-            let categories = await fetch('@categoryUrl', { method: 'GET'})
+            let categories = await fetch('@categoryUrl', { method: 'GET' })
                 .then(response => response.json());
             return categories;
         }
