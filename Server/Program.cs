@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Server.Models;
+using Server.Utility;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -86,9 +87,39 @@ app.MapPost("/security/register", async (Data data, [FromBody] User newUser) =>
         prf: KeyDerivationPrf.HMACSHA256,
         iterationCount: 100000,
         numBytesRequested: 256 / 8));
-    User newRegisteredUser = new User(newUser.UserName, hashedPassword, string.Empty, string.Empty);
+    User newRegisteredUser = new User(newUser.UserName, hashedPassword, salt, string.Empty, string.Empty);
     await data.AddUserAsync(newRegisteredUser);
     return Results.Ok();
+});
+
+app.MapPost("/security/login", [AllowAnonymous] async (Data data, [FromBody] User userLogin) =>
+{
+    var hasher = new PasswordHasher<User>();
+    TokenService _tokenService = new TokenService();
+    var usersList = await data.GetUsersAsync();
+    if (usersList is null)
+        throw new Exception("Could not deserialize users list");
+    var user = usersList.FirstOrDefault(u => u.UserName == userLogin.UserName);
+    if (user is null)
+        return Results.Unauthorized();
+    var loginPasswordHash = Convert.ToBase64String(KeyDerivation.Pbkdf2(
+        password: userLogin.Password!,
+        salt: user.PasswordSalt,
+        prf: KeyDerivationPrf.HMACSHA256,
+        iterationCount: 100000,
+        numBytesRequested: 256 / 8));
+    if (loginPasswordHash != user.Password)
+        return Results.Unauthorized();
+    var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, user.UserName)
+        };
+    var accessToken = _tokenService.GenerateAccessToken(claims);
+    var refreshToken = _tokenService.GenerateRefreshToken();
+    user.RefreshToken = refreshToken;
+    user.RefreshTokenExpiryTime = DateTime.Now.AddDays(7).ToString();
+    await data.SaveDataAsync();
+    return Results.Ok(new AuthenticatedResponse { RefreshToken = refreshToken, Token = accessToken });
 });
 
 app.MapPost("/security/createToken",
@@ -214,7 +245,7 @@ app.MapGet("/categories", async (IAntiforgery antiforgery, HttpContext context) 
     {
         await antiforgery.ValidateRequestAsync(context);
         Data data = new(app.Logger);
-        var categories = await data.GetAllCategoriesAsync();
+        var categories = await data.GetCategoriesAsync();
         return Results.Ok(categories);
     }
     catch (Exception ex)
