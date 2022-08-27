@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Server.Models;
+using Server.Utility;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -86,7 +87,7 @@ app.MapPost("/security/register", async (Data data, [FromBody] User newUser) =>
         prf: KeyDerivationPrf.HMACSHA256,
         iterationCount: 100000,
         numBytesRequested: 256 / 8));
-    User newRegisteredUser = new User(newUser.UserName, hashedPassword, string.Empty, string.Empty);
+    User newRegisteredUser = new User(newUser.UserName, hashedPassword, salt, string.Empty, string.Empty);
     await data.AddUserAsync(newRegisteredUser);
     return Results.Ok();
 });
@@ -214,7 +215,7 @@ app.MapGet("/categories", async (IAntiforgery antiforgery, HttpContext context) 
     {
         await antiforgery.ValidateRequestAsync(context);
         Data data = new(app.Logger);
-        var categories = await data.GetAllCategoriesAsync();
+        var categories = await data.GetCategoriesAsync();
         return Results.Ok(categories);
     }
     catch (Exception ex)
