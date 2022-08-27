@@ -2,10 +2,14 @@
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cryptography.KeyDerivation;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Server.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +20,7 @@ builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSingleton<Data>();
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
 
 builder.Services.AddCors(options =>
@@ -65,10 +70,25 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = string.Empty;
 });
 
-app.MapGet("/antiforgery", (IAntiforgery antiforgery, HttpContext context) =>
+app.MapPost("/security/register", async (Data data, [FromBody] User newUser) =>
 {
-    var tokens = antiforgery.GetAndStoreTokens(context);
-    context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions { HttpOnly = false });
+    var hasher = new PasswordHasher<User>();
+    var usersList = await data.GetUsersAsync();
+    if (usersList is null)
+        throw new Exception("Could not deserialize users list");
+    if (usersList.Find(x => x.UserName == newUser.UserName) != null)
+        return Results.BadRequest("username already exists");
+    byte[] salt = RandomNumberGenerator.GetBytes(128 / 8);
+    // derive a 256-bit subkey (use HMACSHA256 with 100,000 iterations)
+    string hashedPassword = Convert.ToBase64String(KeyDerivation.Pbkdf2(
+        password: newUser.Password!,
+        salt: salt,
+        prf: KeyDerivationPrf.HMACSHA256,
+        iterationCount: 100000,
+        numBytesRequested: 256 / 8));
+    User newRegisteredUser = new User(newUser.UserName, hashedPassword, string.Empty, string.Empty);
+    await data.AddUserAsync(newRegisteredUser);
+    return Results.Ok();
 });
 
 app.MapPost("/security/createToken",
@@ -100,6 +120,12 @@ app.MapPost("/security/createToken",
         var jwtToken = tokenHandler.WriteToken(token);
         var stringToken = tokenHandler.WriteToken(token);
         return Results.Ok(stringToken);
+});
+
+app.MapGet("/antiforgery", (IAntiforgery antiforgery, HttpContext context) =>
+{
+    var tokens = antiforgery.GetAndStoreTokens(context);
+    context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions { HttpOnly = false });
 });
 
 app.MapGet("/recipes", async (HttpContext context, IAntiforgery antiforgery) =>
