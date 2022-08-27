@@ -104,7 +104,7 @@ class Data
         await SaveDataAsync();
     }
 
-    public async Task<List<string>> GetAllCategoriesAsync()
+    public async Task<List<string>> GetCategoriesAsync()
     {
         await LoadDataAsync();
         _categories.Sort();
