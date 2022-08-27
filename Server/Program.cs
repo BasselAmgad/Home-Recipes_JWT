@@ -1,10 +1,22 @@
 
 using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.IdentityModel.Tokens;
+using Server.Models;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 using IHost host = Host.CreateDefaultBuilder(args).Build();
-IConfiguration config = host.Services.GetRequiredService<IConfiguration>();
+
+builder.Services.AddControllers();
+builder.Services.AddSwaggerGen();
+builder.Services.AddAuthorization();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
 
 builder.Services.AddCors(options =>
 {
@@ -17,15 +29,33 @@ builder.Services.AddCors(options =>
                                 .AllowCredentials();
                       });
 });
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(o =>
+{
+    o.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey
+        (Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = false,
+        ValidateIssuerSigningKey = true
+    };
+});
 
 var app = builder.Build();
 
+
 app.UseSwagger();
 app.UseSwaggerUI();
+app.UseAuthorization();
+app.UseAuthentication();
 app.UseHttpsRedirection();
 app.UseCors("localhostOnly");
 
@@ -35,13 +65,44 @@ app.UseSwaggerUI(options =>
     options.RoutePrefix = string.Empty;
 });
 
-app.MapGet("antiforgery", (IAntiforgery antiforgery, HttpContext context) =>
+app.MapGet("/antiforgery", (IAntiforgery antiforgery, HttpContext context) =>
 {
     var tokens = antiforgery.GetAndStoreTokens(context);
     context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions { HttpOnly = false });
 });
 
-app.MapGet("recipes", async (HttpContext context, IAntiforgery antiforgery) =>
+app.MapPost("/security/createToken",
+[AllowAnonymous] (User user) =>
+{
+        var issuer = builder.Configuration["Jwt:Issuer"];
+        var audience = builder.Configuration["Jwt:Audience"];
+        var key = Encoding.ASCII.GetBytes
+        (builder.Configuration["Jwt:Key"]);
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(new[]
+            {
+                new Claim("Id", Guid.NewGuid().ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
+                new Claim(JwtRegisteredClaimNames.Email, user.UserName),
+                new Claim(JwtRegisteredClaimNames.Jti,
+                Guid.NewGuid().ToString())
+             }),
+            Expires = DateTime.UtcNow.AddMinutes(5),
+            Issuer = issuer,
+            Audience = audience,
+            SigningCredentials = new SigningCredentials
+            (new SymmetricSecurityKey(key),
+            SecurityAlgorithms.HmacSha512Signature)
+        };
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        var jwtToken = tokenHandler.WriteToken(token);
+        var stringToken = tokenHandler.WriteToken(token);
+        return Results.Ok(stringToken);
+});
+
+app.MapGet("/recipes", async (HttpContext context, IAntiforgery antiforgery) =>
 {
     try
     {
@@ -54,7 +115,7 @@ app.MapGet("recipes", async (HttpContext context, IAntiforgery antiforgery) =>
     {
         return Results.Problem(ex?.Message ?? string.Empty);
     }
-});
+}).RequireAuthorization();
 
 app.MapGet("/recipes/{id}", async (IAntiforgery antiforgery, HttpContext context, Guid id) =>
 {
@@ -181,7 +242,7 @@ app.MapDelete("/categories", async (IAntiforgery antiforgery, HttpContext contex
     }
 });
 
-app.MapPost("recipes/category", async (IAntiforgery antiforgery, HttpContext context, Guid id, string category) =>
+app.MapPost("/recipes/category", async (IAntiforgery antiforgery, HttpContext context, Guid id, string category) =>
 {
     try
     {
@@ -196,7 +257,7 @@ app.MapPost("recipes/category", async (IAntiforgery antiforgery, HttpContext con
     }
 });
 
-app.MapDelete("recipes/category", async (IAntiforgery antiforgery, HttpContext context, Guid id, string category) =>
+app.MapDelete("/recipes/category", async (IAntiforgery antiforgery, HttpContext context, Guid id, string category) =>
 {
     try
     {
