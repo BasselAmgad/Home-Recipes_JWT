@@ -1,35 +1,51 @@
-﻿using System.Text.Json;
+﻿using Server.Models;
+using System.Text.Json;
 
 class Data
 {
     private readonly ILogger _logger;
     private List<Recipe> _recipes { get; set; } = new();
     private List<string> _categories { get; set; } = new();
+    private List<User> _users { get; set; } = new();
+    private string _usersFilePath;
     private string _recipesFilePath;
     private string _categoriesFilePath;
     public Data(ILogger logger)
     {
         _recipesFilePath = Path.Combine(Environment.CurrentDirectory, "Data", "Recipes.json");
         _categoriesFilePath = Path.Combine(Environment.CurrentDirectory, "Data", "Categories.json");
+        _usersFilePath = Path.Combine(Environment.CurrentDirectory, "Data", "Users.json");
         _logger = logger;
     }
 
+    public async Task<List<User>> GetUsersAsync()
+    {
+        await LoadDataAsync();
+        return _users;
+    }
     public async Task<List<Recipe>> GetRecipesAsync()
     {
-        await LoadData();
+        await LoadDataAsync();
         return _recipes;
+    }
+
+    public async Task AddUserAsync(User user)
+    {
+        await LoadDataAsync();
+        _users.Add(user);
+        await SaveDataAsync();
     }
 
     public async Task AddRecipeAsync(Recipe r)
     {
-        await LoadData();
+        await LoadDataAsync();
         _recipes.Add(r);
         await SaveDataAsync();
     }
 
     public async Task<Recipe> GetRecipeAsync(Guid id)
     {
-        await LoadData();
+        await LoadDataAsync();
         var recipe = _recipes.Find(r => r.Id == id);
         if (recipe == null)
             recipe = new Recipe();
@@ -38,7 +54,7 @@ class Data
 
     public async Task RemoveRecipeAsync(Guid id)
     {
-        await LoadData();
+        await LoadDataAsync();
         var recipe = await GetRecipeAsync(id);
         _recipes.Remove(recipe);
         await SaveDataAsync();
@@ -46,7 +62,7 @@ class Data
 
     public async Task<Recipe> EditRecipeAsync(Guid id, Recipe newRecipe)
     {
-        await LoadData();
+        await LoadDataAsync();
         var recipe = await GetRecipeAsync(id);
         recipe.Title = newRecipe.Title;
         recipe.Ingredients = newRecipe.Ingredients;
@@ -58,7 +74,7 @@ class Data
 
     public async Task EditTitleAsync(Guid id, string newTitle)
     {
-        await LoadData();
+        await LoadDataAsync();
         var recipe = await GetRecipeAsync(id);
         recipe.Title = newTitle;
         await SaveDataAsync();
@@ -66,7 +82,7 @@ class Data
 
     public async Task EditIngredientsAsync(Guid id, string newIngredients)
     {
-        await LoadData();
+        await LoadDataAsync();
         var recipe = await GetRecipeAsync(id);
         recipe.Ingredients = newIngredients;
         await SaveDataAsync();
@@ -74,7 +90,7 @@ class Data
 
     public async Task EditInstructionsAsync(Guid id, string newInstructions)
     {
-        await LoadData();
+        await LoadDataAsync();
         var recipe = await GetRecipeAsync(id);
         recipe.Instructions = newInstructions;
         await SaveDataAsync();
@@ -82,7 +98,7 @@ class Data
 
     public async Task EditCategoryAsync(Guid id, string category, string newCategory)
     {
-        await LoadData();
+        await LoadDataAsync();
         await RemoveCategoryFromRecipeAsync(id, category);
         await AddCategoryToRecipeAsync(id, newCategory);
         await SaveDataAsync();
@@ -90,14 +106,14 @@ class Data
 
     public async Task<List<string>> GetAllCategoriesAsync()
     {
-        await LoadData();
+        await LoadDataAsync();
         _categories.Sort();
         return _categories;
     }
 
     public async Task AddCategoryAsync(string category)
     {
-        await LoadData();
+        await LoadDataAsync();
         if (!_categories.Contains(category))
             _categories.Add(category);
         await SaveDataAsync();
@@ -105,7 +121,7 @@ class Data
 
     public async Task EditCategoryAsync(string category, string newCategory)
     {
-        await LoadData();
+        await LoadDataAsync();
         if (_categories.Contains(category))
         {
             foreach (var recipe in _recipes.Where(r => r.Categories.Contains(category)))
@@ -121,7 +137,7 @@ class Data
 
     public async Task RemoveCategoryAsync(string category)
     {
-        await LoadData();
+        await LoadDataAsync();
         if (_categories.Contains(category))
         {
             _categories.Remove(category);
@@ -134,7 +150,7 @@ class Data
 
     public async Task AddCategoryToRecipeAsync(Guid id, string category)
     {
-        await LoadData();
+        await LoadDataAsync();
         if (_categories.Contains(category))
         {
             var recipe = await GetRecipeAsync(id);
@@ -150,7 +166,7 @@ class Data
         await SaveDataAsync();
     }
 
-    public async Task LoadData()
+    public async Task LoadDataAsync()
     {
         try
         {
@@ -163,6 +179,11 @@ class Data
             {
                 _categories = new List<string>();
                 await File.WriteAllTextAsync(_categoriesFilePath, JsonSerializer.Serialize(_categories));
+            }
+            if (!File.Exists(_usersFilePath))
+            {
+                _users = new List<User>();
+                await File.WriteAllTextAsync(_categoriesFilePath, JsonSerializer.Serialize(_users));
             }
         }
         catch (Exception ex)
@@ -185,6 +206,13 @@ class Data
                 if (json != null)
                     _categories = json;
             }
+            using (StreamReader r = new(_usersFilePath))
+            {
+                var data = await r.ReadToEndAsync();
+                var json = JsonSerializer.Deserialize<List<User>>(data);
+                if (json != null)
+                    _users = json;
+            }
         }
         catch (Exception ex)
         {
@@ -199,6 +227,7 @@ class Data
         {
             await File.WriteAllTextAsync(_recipesFilePath, JsonSerializer.Serialize(_recipes));
             await File.WriteAllTextAsync(_categoriesFilePath, JsonSerializer.Serialize(_categories));
+            await File.WriteAllTextAsync(_usersFilePath, JsonSerializer.Serialize(_users));
         }
         catch (Exception ex)
         {
