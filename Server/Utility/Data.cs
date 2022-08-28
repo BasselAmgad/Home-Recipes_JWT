@@ -181,7 +181,7 @@ class Data
             if (!File.Exists(_usersFilePath))
             {
                 _users = new List<User>();
-                await File.WriteAllTextAsync(_categoriesFilePath, JsonSerializer.Serialize(_users));
+                await File.WriteAllTextAsync(_usersFilePath, JsonSerializer.Serialize(_users));
             }
         }
         catch (Exception ex)
