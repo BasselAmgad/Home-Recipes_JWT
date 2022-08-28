@@ -3,19 +3,17 @@ using System.Text.Json;
 
 class Data
 {
-    private readonly ILogger _logger;
     private List<Recipe> _recipes { get; set; } = new();
     private List<string> _categories { get; set; } = new();
     private List<User> _users { get; set; } = new();
     private string _usersFilePath;
     private string _recipesFilePath;
     private string _categoriesFilePath;
-    public Data(ILogger logger)
+    public Data()
     {
         _recipesFilePath = Path.Combine(Environment.CurrentDirectory, "Data", "Recipes.json");
         _categoriesFilePath = Path.Combine(Environment.CurrentDirectory, "Data", "Categories.json");
         _usersFilePath = Path.Combine(Environment.CurrentDirectory, "Data", "Users.json");
-        _logger = logger;
     }
 
     public async Task<List<User>> GetUsersAsync()
@@ -188,7 +186,7 @@ class Data
         }
         catch (Exception ex)
         {
-            _logger.LogError(DateTime.Now.ToString(), "- Error while attempting to create the files: ", ex.ToString());
+            Console.WriteLine(DateTime.Now.ToString() + " - Error while attempting to create the files: " + ex.ToString());
         }
         try
         {
@@ -216,7 +214,7 @@ class Data
         }
         catch (Exception ex)
         {
-            _logger.LogError(DateTime.Now.ToString(), "- Error while attempting to save the data to the files: ", ex.ToString());
+            Console.WriteLine(DateTime.Now.ToString() + " - Error while attempting to save the data to the files: " + ex.ToString());
         }
 
     }
@@ -231,7 +229,7 @@ class Data
         }
         catch (Exception ex)
         {
-            _logger.LogError(DateTime.Now.ToString(), "- Error while attempting to save files: ", ex.ToString());
+            Console.WriteLine(DateTime.Now.ToString() + " - Error while attempting to save files: " + ex.ToString());
         }
     }
 }
