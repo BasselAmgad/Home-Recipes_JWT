@@ -102,13 +102,8 @@ app.MapPost("/security/login", [AllowAnonymous] async (Data data, [FromBody] Use
     var user = usersList.FirstOrDefault(u => u.UserName == userLogin.UserName);
     if (user is null)
         return Results.Unauthorized();
-    var loginPasswordHash = Convert.ToBase64String(KeyDerivation.Pbkdf2(
-        password: userLogin.Password!,
-        salt: user.PasswordSalt,
-        prf: KeyDerivationPrf.HMACSHA256,
-        iterationCount: 100000,
-        numBytesRequested: 256 / 8));
-    if (loginPasswordHash != user.Password)
+    var loginPasswordHash = hasher.VerifyHashedPassword(user, user.Password, userLogin.Password);
+    if (loginPasswordHash.Equals(0))
         return Results.Unauthorized();
     var claims = new List<Claim>
         {
@@ -159,7 +154,7 @@ app.MapGet("/antiforgery", (IAntiforgery antiforgery, HttpContext context) =>
     context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions { HttpOnly = false });
 });
 
-app.MapGet("/recipes", async (Data data, HttpContext context, IAntiforgery antiforgery) =>
+app.MapGet("/recipes",[AllowAnonymous] async (Data data, HttpContext context, IAntiforgery antiforgery) =>
 {
     try
     {
@@ -171,9 +166,9 @@ app.MapGet("/recipes", async (Data data, HttpContext context, IAntiforgery antif
     {
         return Results.Problem(ex?.Message ?? string.Empty);
     }
-}).RequireAuthorization();
+});
 
-app.MapGet("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id) =>
+app.MapGet("/recipes/{id}", [AllowAnonymous] async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id) =>
 {
     try
     {
@@ -234,7 +229,7 @@ app.MapDelete("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpC
 
 });
 
-app.MapGet("/categories", async (Data data, IAntiforgery antiforgery, HttpContext context) =>
+app.MapGet("/categories", [AllowAnonymous] async (Data data, IAntiforgery antiforgery, HttpContext context) =>
 {
     try
     {
@@ -246,7 +241,7 @@ app.MapGet("/categories", async (Data data, IAntiforgery antiforgery, HttpContex
     {
         return Results.Problem(ex?.Message ?? string.Empty);
     }
-});
+}).RequireAuthorization();
 
 app.MapPost("/categories", async (Data data, IAntiforgery antiforgery, HttpContext context, string category) =>
 {
