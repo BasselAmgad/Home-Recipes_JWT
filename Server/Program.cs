@@ -159,12 +159,11 @@ app.MapGet("/antiforgery", (IAntiforgery antiforgery, HttpContext context) =>
     context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions { HttpOnly = false });
 });
 
-app.MapGet("/recipes", async (HttpContext context, IAntiforgery antiforgery) =>
+app.MapGet("/recipes", async (Data data, HttpContext context, IAntiforgery antiforgery) =>
 {
     try
     {
         await antiforgery.ValidateRequestAsync(context);
-        Data data = new(app.Logger);
         var recipes = await data.GetRecipesAsync();
         return Results.Ok(recipes);
     }
@@ -174,12 +173,11 @@ app.MapGet("/recipes", async (HttpContext context, IAntiforgery antiforgery) =>
     }
 }).RequireAuthorization();
 
-app.MapGet("/recipes/{id}", async (IAntiforgery antiforgery, HttpContext context, Guid id) =>
+app.MapGet("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id) =>
 {
     try
     {
         await antiforgery.ValidateRequestAsync(context);
-        Data data = new(app.Logger);
         Recipe recipe = await data.GetRecipeAsync(id);
         return Results.Ok(recipe);
     }
@@ -190,12 +188,11 @@ app.MapGet("/recipes/{id}", async (IAntiforgery antiforgery, HttpContext context
 
 });
 
-app.MapPost("/recipes", async (IAntiforgery antiforgery, HttpContext context, Recipe recipe) =>
+app.MapPost("/recipes", async (Data data, IAntiforgery antiforgery, HttpContext context, Recipe recipe) =>
 {
     try
     {
         await antiforgery.ValidateRequestAsync(context);
-        Data data = new(app.Logger);
         recipe.Id = Guid.NewGuid();
         await data.AddRecipeAsync(recipe);
         return Results.Created($"/recipes/{recipe.Id}", recipe);
@@ -207,12 +204,11 @@ app.MapPost("/recipes", async (IAntiforgery antiforgery, HttpContext context, Re
 
 });
 
-app.MapPut("/recipes/{id}", async (IAntiforgery antiforgery, HttpContext context, Guid id, Recipe newRecipe) =>
+app.MapPut("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id, Recipe newRecipe) =>
 {
     try
     {
         await antiforgery.ValidateRequestAsync(context);
-        Data data = new(app.Logger);
         var updatedRecipe = await data.EditRecipeAsync(id, newRecipe);
         return Results.Ok(updatedRecipe);
     }
@@ -223,12 +219,11 @@ app.MapPut("/recipes/{id}", async (IAntiforgery antiforgery, HttpContext context
 
 });
 
-app.MapDelete("/recipes/{id}", async (IAntiforgery antiforgery, HttpContext context, Guid id) =>
+app.MapDelete("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id) =>
 {
     try
     {
         await antiforgery.ValidateRequestAsync(context);
-        Data data = new(app.Logger);
         await data.RemoveRecipeAsync(id);
         return Results.Ok();
     }
@@ -239,12 +234,11 @@ app.MapDelete("/recipes/{id}", async (IAntiforgery antiforgery, HttpContext cont
 
 });
 
-app.MapGet("/categories", async (IAntiforgery antiforgery, HttpContext context) =>
+app.MapGet("/categories", async (Data data, IAntiforgery antiforgery, HttpContext context) =>
 {
     try
     {
         await antiforgery.ValidateRequestAsync(context);
-        Data data = new(app.Logger);
         var categories = await data.GetCategoriesAsync();
         return Results.Ok(categories);
     }
@@ -254,12 +248,11 @@ app.MapGet("/categories", async (IAntiforgery antiforgery, HttpContext context) 
     }
 });
 
-app.MapPost("/categories", async (IAntiforgery antiforgery, HttpContext context, string category) =>
+app.MapPost("/categories", async (Data data, IAntiforgery antiforgery, HttpContext context, string category) =>
 {
     try
     {
         await antiforgery.ValidateRequestAsync(context);
-        Data data = new(app.Logger);
         await data.AddCategoryAsync(category);
         return Results.Created($"/categories/{category}", category);
     }
@@ -269,12 +262,11 @@ app.MapPost("/categories", async (IAntiforgery antiforgery, HttpContext context,
     }
 });
 
-app.MapPut("/categories", async (IAntiforgery antiforgery, HttpContext context, string category, string newCategory) =>
+app.MapPut("/categories", async (Data data, IAntiforgery antiforgery, HttpContext context, string category, string newCategory) =>
 {
     try
     {
         await antiforgery.ValidateRequestAsync(context);
-        Data data = new(app.Logger);
         await data.EditCategoryAsync(category, newCategory);
         return Results.Ok($"Category ({category}) updated to ({newCategory})");
     }
@@ -284,12 +276,11 @@ app.MapPut("/categories", async (IAntiforgery antiforgery, HttpContext context, 
     }
 });
 
-app.MapDelete("/categories", async (IAntiforgery antiforgery, HttpContext context, string category) =>
+app.MapDelete("/categories", async (Data data, IAntiforgery antiforgery, HttpContext context, string category) =>
 {
     try
     {
         await antiforgery.ValidateRequestAsync(context);
-        Data data = new(app.Logger);
         await data.RemoveCategoryAsync(category);
         return Results.Ok();
     }
@@ -299,12 +290,11 @@ app.MapDelete("/categories", async (IAntiforgery antiforgery, HttpContext contex
     }
 });
 
-app.MapPost("/recipes/category", async (IAntiforgery antiforgery, HttpContext context, Guid id, string category) =>
+app.MapPost("/recipes/category", async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id, string category) =>
 {
     try
     {
         await antiforgery.ValidateRequestAsync(context);
-        Data data = new(app.Logger);
         await data.AddCategoryToRecipeAsync(id, category);
         return Results.Created($"recipes/category/{category}", category);
     }
@@ -314,12 +304,11 @@ app.MapPost("/recipes/category", async (IAntiforgery antiforgery, HttpContext co
     }
 });
 
-app.MapDelete("/recipes/category", async (IAntiforgery antiforgery, HttpContext context, Guid id, string category) =>
+app.MapDelete("/recipes/category", async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id, string category) =>
 {
     try
     {
         await antiforgery.ValidateRequestAsync(context);
-        Data data = new(app.Logger);
         await data.RemoveCategoryFromRecipeAsync(id, category);
         return Results.Ok();
     }
