@@ -114,7 +114,7 @@ app.MapPost("/security/login", [AllowAnonymous] async (Data data, [FromBody] Use
     user.RefreshToken = refreshToken;
     user.RefreshTokenExpiryTime = DateTime.Now.AddDays(7).ToString();
     await data.SaveDataAsync();
-    return Results.Ok(new AuthenticatedResponse { RefreshToken = refreshToken, Token = accessToken });
+    return Results.Ok(new AuthenticatedResponse { RefreshToken = refreshToken, Token = accessToken, UserName = user.UserName });
 });
 
 app.MapPost("/security/createToken",
