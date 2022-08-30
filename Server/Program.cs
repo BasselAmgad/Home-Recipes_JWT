@@ -154,7 +154,7 @@ app.MapGet("/antiforgery", (IAntiforgery antiforgery, HttpContext context) =>
     context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions { HttpOnly = false });
 });
 
-app.MapGet("/recipes",[AllowAnonymous] async (Data data, HttpContext context, IAntiforgery antiforgery) =>
+app.MapGet("/recipes", async (Data data, HttpContext context, IAntiforgery antiforgery) =>
 {
     try
     {
@@ -168,7 +168,7 @@ app.MapGet("/recipes",[AllowAnonymous] async (Data data, HttpContext context, IA
     }
 });
 
-app.MapGet("/recipes/{id}", [AllowAnonymous] async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id) =>
+app.MapGet("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id) =>
 {
     try
     {
@@ -229,7 +229,7 @@ app.MapDelete("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpC
 
 });
 
-app.MapGet("/categories", [AllowAnonymous] async (Data data, IAntiforgery antiforgery, HttpContext context) =>
+app.MapGet("/categories", async (Data data, IAntiforgery antiforgery, HttpContext context) =>
 {
     try
     {
