@@ -26,77 +26,158 @@
 
 <body background="/images/background.jpg" style="background-size: cover; background-attachment: fixed;">
     <script type="text/javascript">
-        
+        async function loginUser(username, password) {
+            const antiforgery = await getTokenFromPage();
+            if (username.length == 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Please enter a username',
+                })
+                return false;
+            }
+            if (password.length == 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Please enter a password',
+                })
+                return false;
+            }
+            const user =
+            {
+                userName: username,
+                password: password,
+                passwordSalt: "",
+                refreshToken: "",
+                refreshTokenExpireyTime: ""
+
+            }
+            var response = await fetch(`@Config["url"]/security/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    "X-XSRF-TOKEN": antiforgery,
+                },
+                body: JSON.stringify(user),
+            })
+            if (response.status === 401) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Incorrect username or password.',
+                });
+                return false;
+            }
+            if (response.status != 200) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Something went wrong...',
+                });
+                return false;
+            }
+            const responseJson = await response.json();
+            localStorage.setItem('token', responseJson['token']);
+            localStorage.setItem('refreshToken', responseJson['refreshToken']);
+            localStorage.setItem('username', responseJson['username']);
+            Swal.fire({
+                icon: 'success',
+                title: 'Logged In',
+                showConfirmButton: false,
+                timer: 1500
+            }).then(() => {
+                switchNavLogin(true);
+                return true;
+            });
+        }
+        function checkAuthenticated() {
+            if (localStorage.token) {
+                return true;
+            }
+            return false;
+        }
+        function logOut() {
+            localStorage.removeItem("token");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("username");
+            window.location.reload(true);
+        }
     </script>
-    <div class="container">
-        <br />
-        <div x-data="{login:true}" class="row justify-content-center ">
-            <div class="col-md-6">
-                <div id="registerCard" class="card">
-                    <ul class="nav nav-tabs">
-                        <li class="nav-item">
-                            <a id="loginNavLink" class="nav-link active" aria-current="page" href="#"
-                               x-on:click="switchNavLogin(true);login=true;">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a id="registerNavLink" class="nav-link" href="#"
-                               x-on:click="switchNavLogin(false);login=false;">Register</a>
-                        </li>
-                    </ul>
-                    <template x-if="login">
-                        <form id="loginForm">
-                            <div id="registerCard" class="card-body" x-show="login">
-                                <h4 class="card-title text-center">Login</h4>
-
-                                <div class="mb-3">
-                                    <label for="usernameInput" class="form-label">Username</label>
-                                    <input type="text" class="form-control" id="usernameInput" aria-describedby="usernameHelp">
-                                    <span id="usernameHelp" class="form-text"></span>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="passwordInput" class="form-label">Password</label>
-                                    <input type="password" id="passwordInput" class="form-control" aria-describedby="passwordHelp">
-                                </div>
-                                <button type="submit" class="btn btn-primary">Submit</button>
-
-                            </div>
-
-                        </form>
-                    </template>
-
-                    <template x-data={username:'',password:''} x-if="!login">
-                        <form id="registerForm">
-                            <div id="registerCard" class="card-body" x-show="!login">
-                                <h4 class="card-title text-center">Register</h4>
-                                <div class="mb-3">
-                                    <label for="usernameInput" class="form-label">Username</label>
-                                    <input x-model="username" type="text" class="form-control" id="usernameInput"
-                                           aria-describedby="usernameHelp" min="1">
-                                    <div id="usernameHelp" class="form-text">
-                                        Your username must be between 1 to 20 characters.
+    <div x-data="{loggedIn:false}" x-init="loggedIn = checkAuthenticated();">
+        <template x-if="!loggedIn">
+            <div class="container">
+                <br />
+                <div x-data="{login:true}" class="row justify-content-center ">
+                    <div class="col-md-6">
+                        <div id="registerCard" class="card">
+                            @*Login and register nav bar*@
+                            <ul class="nav nav-tabs">
+                                <li class="nav-item">
+                                    <a id="loginNavLink" class="nav-link active" aria-current="page" href="#"
+                                       x-on:click="switchNavLogin(true);login=true;">Login</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a id="registerNavLink" class="nav-link" href="#"
+                                       x-on:click="switchNavLogin(false);login=false;">Register</a>
+                                </li>
+                            </ul>
+                            @*Login form*@
+                            <template x-data={username:'',password:''} x-if="login">
+                                <form id="loginForm">
+                                    <div id="registerCard" class="card-body" x-show="login">
+                                        <h4 class="card-title text-center">Login</h4>
+                                        <div class="mb-3">
+                                            <label for="usernameInput" class="form-label">Username</label>
+                                            <input x-model="username" type="text" class="form-control" id="usernameInput" aria-describedby="usernameHelp">
+                                            <span id="usernameHelp" class="form-text"></span>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="passwordInput" class="form-label">Password</label>
+                                            <input x-model="password" type="password" id="passwordInput" class="form-control" aria-describedby="passwordHelp">
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="passwordInput" class="form-label">Password</label>
-                                    <input x-model="password" min="5" max="20" type="password" id="passwordInput" class="form-control"
-                                           aria-describedby="passwordHelp" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,20}">
-                                    <div id="passwordHelp" class="form-text">
-                                        Your password must be between 8 to 20 characters which contain at least one numeric digit, one uppercase and one lowercase letter.
+                                    <div class="modal-footer">
+                                        <button type="button" x-on:click="this.loggedIn = await loginUser(username,password); console.log(loggedIn);" class="btn btn-primary">Login</button>
                                     </div>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" x-on:click="await registerUser(username,password);" class="btn btn-primary">Register</button>
-                            </div>
-                        </form>
-                    </template>
+                                </form>
+                            </template>
+                            @*Register form*@
+                            <template x-data="{usernameRegister:'', passwordRegister:''}" x-if="!login">
+                                <form id="registerForm">
+                                    <div id="registerCard" class="card-body" x-show="!login">
+                                        <h4 class="card-title text-center">Register</h4>
+                                        <div class="mb-3">
+                                            <label for="usernameInput" class="form-label">Username</label>
+                                            <input x-model="usernameRegister" type="text" class="form-control" id="usernameInput"
+                                                   aria-describedby="usernameHelp" min="1">
+                                            <div id="usernameHelp" class="form-text">
+                                                Your username must be between 1 to 20 characters.
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="passwordInput" class="form-label">Password</label>
+                                            <input x-model="passwordRegister" min="5" max="20" type="password" id="passwordInput" class="form-control"
+                                                   aria-describedby="passwordHelp" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,20}">
+                                            <div id="passwordHelp" class="form-text">
+                                                Your password must be between 8 to 20 characters which contain at least one numeric digit, one uppercase and one lowercase letter.
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" x-on:click="loggedIn = await registerUser(usernameRegister,passwordRegister);" class="btn btn-primary">Register</button>
+                                    </div>
+                                </form>
+                            </template>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </template>
     </div>
 
-    <template x-if="false">
-        <div x-data="{show:true}" x-if="false">
+    <template x-if="loggedIn" x-init="loggedIn = checkAuthenticated();">
+        <div x-data="{show:true}">
             @*Navbar*@
             <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
                 <div class="container-fluid">
@@ -125,6 +206,7 @@
                             <input class="form-control me-sm-2" type="text" placeholder="Search">
                             <button class="btn btn-secondary my-2 my-sm-0" type="submit">Search</button>
                         </form>
+                        <button x-on:click="logOut()" class="btn btn-primary my-2 my-sm-0" type="button">Log Out</button>
                     </div>
                 </div>
             </nav>
@@ -444,7 +526,7 @@
                     title: 'Oops...',
                     text: 'Please enter a username',
                 })
-                return;
+                return false;
             }
             var passwordValidation = /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,20}/
             if (!password.match(passwordValidation)) {
@@ -453,7 +535,7 @@
                     title: 'Oops...',
                     text: 'Please follow password requirements.',
                 })
-                return;
+                return false;
             }
             const user =
             {
@@ -478,9 +560,9 @@
                         title: 'User Created',
                         showConfirmButton: false,
                         timer: 1500
-                    }).then(() =>{
+                    }).then(() => {
                         switchNavLogin(true);
-                        login = true;
+                        return true;
                     });
                 }
                 else {
@@ -488,7 +570,8 @@
                         icon: 'error',
                         title: 'Oops...',
                         text: 'Something went wrong!',
-                    })
+                    });
+                    return false;
                 }
             })
         }
