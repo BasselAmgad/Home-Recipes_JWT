@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Server.Models;
 using Server.Utility;
 using System.IdentityModel.Tokens.Jwt;
@@ -14,15 +15,35 @@ using System.Security.Cryptography;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+var securityScheme = new OpenApiSecurityScheme()
+{
+    Name = "Authorization",
+    Type = SecuritySchemeType.ApiKey,
+    Scheme = "Bearer",
+    BearerFormat = "JWT",
+    In = ParameterLocation.Header,
+    Description = "JSON Web Token based security",
+};
 
-using IHost host = Host.CreateDefaultBuilder(args).Build();
-
-builder.Services.AddControllers();
-builder.Services.AddSwaggerGen();
-builder.Services.AddAuthorization();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSingleton<Data>();
-builder.Services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
+var securityReq = new OpenApiSecurityRequirement()
+                {
+                    {
+                     new OpenApiSecurityScheme
+                     {
+                     Reference = new OpenApiReference
+                     {
+                     Type = ReferenceType.SecurityScheme,
+                     Id = "Bearer"
+                     }
+                     },
+                     new string[] {}
+                    }
+                };
+builder.Services.AddSwaggerGen(o =>
+{
+    o.AddSecurityDefinition("Bearer", securityScheme);
+    o.AddSecurityRequirement(securityReq);
+});
 
 builder.Services.AddCors(options =>
 {
@@ -35,25 +56,31 @@ builder.Services.AddCors(options =>
                                 .AllowCredentials();
                       });
 });
-builder.Services.AddAuthentication(options =>
+builder.Services.AddAuthentication(o =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+    o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    o.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    o.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(o =>
 {
     o.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey
-        (Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
         ValidateIssuer = true,
         ValidateAudience = true,
         ValidateLifetime = false,
-        ValidateIssuerSigningKey = true
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey
+            (Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
     };
 });
+
+builder.Services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
+builder.Services.AddAuthorization();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSingleton<Data>();
+builder.Services.AddControllers();
 
 var app = builder.Build();
 
@@ -95,7 +122,7 @@ app.MapPost("/security/register", async (Data data, [FromBody] User newUser) =>
 app.MapPost("/security/login", [AllowAnonymous] async (Data data, [FromBody] User userLogin) =>
 {
     var hasher = new PasswordHasher<User>();
-    TokenService _tokenService = new TokenService();
+    TokenService tokenService = new TokenService();
     var usersList = await data.GetUsersAsync();
     if (usersList is null)
         throw new Exception("Could not deserialize users list");
@@ -103,49 +130,55 @@ app.MapPost("/security/login", [AllowAnonymous] async (Data data, [FromBody] Use
     if (user is null)
         return Results.Unauthorized();
     var loginPasswordHash = hasher.VerifyHashedPassword(user, user.Password, userLogin.Password);
-    if (loginPasswordHash.Equals(0))
+    if (loginPasswordHash.Equals(PasswordVerificationResult.Failed))
         return Results.Unauthorized();
-    var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.Name, user.UserName)
-        };
-    var accessToken = _tokenService.GenerateAccessToken(claims);
-    var refreshToken = _tokenService.GenerateRefreshToken();
+    var issuer = builder.Configuration["Jwt:Issuer"];
+    var audience = builder.Configuration["Jwt:Audience"];
+    var securityKey = new SymmetricSecurityKey
+        (Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]));
+    var credentials = new SigningCredentials(securityKey,
+        SecurityAlgorithms.HmacSha256);
+    var token = new JwtSecurityToken(issuer: issuer,
+        audience: audience,
+        signingCredentials: credentials);
+    var tokenHandler = new JwtSecurityTokenHandler();
+    var stringToken = tokenHandler.WriteToken(token);
+    var refreshToken = tokenService.GenerateRefreshToken();
     user.RefreshToken = refreshToken;
     user.RefreshTokenExpiryTime = DateTime.Now.AddDays(7).ToString();
     await data.SaveDataAsync();
-    return Results.Ok(new AuthenticatedResponse { RefreshToken = refreshToken, Token = accessToken, UserName = user.UserName });
+    return Results.Ok(new AuthenticatedResponse { RefreshToken = refreshToken, Token = stringToken, UserName = user.UserName });
 });
 
 app.MapPost("/security/createToken",
 [AllowAnonymous] (User user) =>
 {
-        var issuer = builder.Configuration["Jwt:Issuer"];
-        var audience = builder.Configuration["Jwt:Audience"];
-        var key = Encoding.ASCII.GetBytes
-        (builder.Configuration["Jwt:Key"]);
-        var tokenDescriptor = new SecurityTokenDescriptor
+    var issuer = builder.Configuration["Jwt:Issuer"];
+    var audience = builder.Configuration["Jwt:Audience"];
+    var key = Encoding.ASCII.GetBytes
+    (builder.Configuration["Jwt:Key"]);
+    var tokenDescriptor = new SecurityTokenDescriptor
+    {
+        Subject = new ClaimsIdentity(new[]
         {
-            Subject = new ClaimsIdentity(new[]
-            {
                 new Claim("Id", Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
                 new Claim(JwtRegisteredClaimNames.Email, user.UserName),
                 new Claim(JwtRegisteredClaimNames.Jti,
                 Guid.NewGuid().ToString())
              }),
-            Expires = DateTime.UtcNow.AddMinutes(5),
-            Issuer = issuer,
-            Audience = audience,
-            SigningCredentials = new SigningCredentials
-            (new SymmetricSecurityKey(key),
-            SecurityAlgorithms.HmacSha512Signature)
-        };
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        var jwtToken = tokenHandler.WriteToken(token);
-        var stringToken = tokenHandler.WriteToken(token);
-        return Results.Ok(stringToken);
+        Expires = DateTime.UtcNow.AddMinutes(5),
+        Issuer = issuer,
+        Audience = audience,
+        SigningCredentials = new SigningCredentials
+        (new SymmetricSecurityKey(key),
+        SecurityAlgorithms.HmacSha512Signature)
+    };
+    var tokenHandler = new JwtSecurityTokenHandler();
+    var token = tokenHandler.CreateToken(tokenDescriptor);
+    var jwtToken = tokenHandler.WriteToken(token);
+    var stringToken = tokenHandler.WriteToken(token);
+    return Results.Ok(stringToken);
 });
 
 app.MapGet("/antiforgery", (IAntiforgery antiforgery, HttpContext context) =>
@@ -154,7 +187,7 @@ app.MapGet("/antiforgery", (IAntiforgery antiforgery, HttpContext context) =>
     context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions { HttpOnly = false });
 });
 
-app.MapGet("/recipes", async (Data data, HttpContext context, IAntiforgery antiforgery) =>
+app.MapGet("/recipes", [Authorize] async (Data data, HttpContext context, IAntiforgery antiforgery) =>
 {
     try
     {
@@ -241,7 +274,7 @@ app.MapGet("/categories", async (Data data, IAntiforgery antiforgery, HttpContex
     {
         return Results.Problem(ex?.Message ?? string.Empty);
     }
-}).RequireAuthorization();
+});
 
 app.MapPost("/categories", async (Data data, IAntiforgery antiforgery, HttpContext context, string category) =>
 {
