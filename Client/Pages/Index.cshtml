@@ -26,83 +26,7 @@
 
 <body background="/images/background.jpg" style="background-size: cover; background-attachment: fixed;">
     <script type="text/javascript">
-        async function loginUser(username, password) {
-            const antiforgery = await getTokenFromPage();
-            if (username.length == 0) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Oops...',
-                    text: 'Please enter a username',
-                })
-                return false;
-            }
-            if (password.length == 0) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Oops...',
-                    text: 'Please enter a password',
-                })
-                return false;
-            }
-            const user =
-            {
-                userName: username,
-                password: password,
-                passwordSalt: "",
-                refreshToken: "",
-                refreshTokenExpireyTime: ""
 
-            }
-            var response = await fetch(`@Config["url"]/security/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    "X-XSRF-TOKEN": antiforgery,
-                },
-                body: JSON.stringify(user),
-            })
-            if (response.status === 401) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Oops...',
-                    text: 'Incorrect username or password.',
-                });
-                return false;
-            }
-            if (response.status != 200) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Oops...',
-                    text: 'Something went wrong...',
-                });
-                return false;
-            }
-            const responseJson = await response.json();
-            localStorage.setItem('token', responseJson['token']);
-            localStorage.setItem('refreshToken', responseJson['refreshToken']);
-            localStorage.setItem('username', responseJson['username']);
-            Swal.fire({
-                icon: 'success',
-                title: 'Logged In',
-                showConfirmButton: false,
-                timer: 1500
-            }).then(() => {
-                switchNavLogin(true);
-                return true;
-            });
-        }
-        function checkAuthenticated() {
-            if (localStorage.token) {
-                return true;
-            }
-            return false;
-        }
-        function logOut() {
-            localStorage.removeItem("token");
-            localStorage.removeItem("refreshToken");
-            localStorage.removeItem("username");
-            window.location.reload(true);
-        }
     </script>
     <div x-data="{loggedIn:false}" x-init="loggedIn = checkAuthenticated();">
         <template x-if="!loggedIn">
@@ -518,6 +442,7 @@
 
 
     <script type="text/javascript">
+
         async function registerUser(username, password) {
             const antiforgery = await getTokenFromPage();
             if (username.length == 0) {
@@ -585,6 +510,86 @@
                 document.getElementById("registerNavLink").classList.add("active");
                 document.getElementById("loginNavLink").classList.remove("active");
             }
+        }
+
+        async function loginUser(username, password) {
+            const antiforgery = await getTokenFromPage();
+            if (username.length == 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Please enter a username',
+                })
+                return false;
+            }
+            if (password.length == 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Please enter a password',
+                })
+                return false;
+            }
+            const user =
+            {
+                userName: username,
+                password: password,
+                passwordSalt: "",
+                refreshToken: "",
+                refreshTokenExpireyTime: ""
+
+            }
+            var response = await fetch(`@Config["url"]/security/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    "X-XSRF-TOKEN": antiforgery,
+                },
+                body: JSON.stringify(user),
+            })
+            if (response.status === 401) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Incorrect username or password.',
+                });
+                return false;
+            }
+            if (response.status != 200) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Something went wrong...',
+                });
+                return false;
+            }
+            const responseJson = await response.json();
+            localStorage.setItem('token', responseJson['token']);
+            localStorage.setItem('refreshToken', responseJson['refreshToken']);
+            localStorage.setItem('username', responseJson['username']);
+            Swal.fire({
+                icon: 'success',
+                title: 'Logged In',
+                showConfirmButton: false,
+                timer: 1500
+            }).then(() => {
+                switchNavLogin(true);
+                return true;
+            });
+        }
+
+        function checkAuthenticated() {
+            if (localStorage.token) {
+                return true;
+            }
+            return false;
+        }
+
+        function logOut() {
+            localStorage.removeItem("token");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("username");
+            window.location.reload(true);
         }
 
         async function fetchToken() {
