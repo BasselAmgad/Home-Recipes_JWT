@@ -26,19 +26,19 @@ var securityScheme = new OpenApiSecurityScheme()
 };
 
 var securityReq = new OpenApiSecurityRequirement()
-                {
-                    {
-                     new OpenApiSecurityScheme
-                     {
-                     Reference = new OpenApiReference
-                     {
-                     Type = ReferenceType.SecurityScheme,
-                     Id = "Bearer"
-                     }
-                     },
-                     new string[] {}
-                    }
-                };
+{
+    {
+        new OpenApiSecurityScheme
+        {
+            Reference = new OpenApiReference
+            {
+                Type = ReferenceType.SecurityScheme,
+                Id = "Bearer"
+            }
+        },
+        new string[] {}
+    }
+};
 builder.Services.AddSwaggerGen(o =>
 {
     o.AddSecurityDefinition("Bearer", securityScheme);
@@ -130,7 +130,7 @@ app.MapPost("/security/login", [AllowAnonymous] async (Data data, [FromBody] Use
     if (user is null)
         return Results.Unauthorized();
     var loginPasswordHash = hasher.VerifyHashedPassword(user, user.Password, userLogin.Password);
-    if (loginPasswordHash.Equals(PasswordVerificationResult.Failed))
+    if (loginPasswordHash.Equals(0))
         return Results.Unauthorized();
     var issuer = builder.Configuration["Jwt:Issuer"];
     var audience = builder.Configuration["Jwt:Audience"];
@@ -138,9 +138,12 @@ app.MapPost("/security/login", [AllowAnonymous] async (Data data, [FromBody] Use
         (Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]));
     var credentials = new SigningCredentials(securityKey,
         SecurityAlgorithms.HmacSha256);
-    var token = new JwtSecurityToken(issuer: issuer,
+    var token = new JwtSecurityToken(
+        issuer: issuer,
+        expires: DateTime.Now.AddDays(3),
         audience: audience,
-        signingCredentials: credentials);
+        signingCredentials: credentials
+        );
     var tokenHandler = new JwtSecurityTokenHandler();
     var stringToken = tokenHandler.WriteToken(token);
     var refreshToken = tokenService.GenerateRefreshToken();

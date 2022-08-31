@@ -25,9 +25,6 @@
 </head>
 
 <body background="/images/background.jpg" style="background-size: cover; background-attachment: fixed;">
-    <script type="text/javascript">
-
-    </script>
     <div x-data="{loggedIn:false}" x-init="loggedIn = checkAuthenticated();">
         <template x-if="!loggedIn">
             <div class="container">
@@ -544,6 +541,8 @@
                 headers: {
                     'Content-Type': 'application/json',
                     "X-XSRF-TOKEN": antiforgery,
+                    'Authorization': 'Bearer '+localStorage.getItem("token"),
+
                 },
                 body: JSON.stringify(user),
             })
@@ -609,15 +608,16 @@
 
         async function getRecipes() {
             const antiforgery = await getTokenFromPage();
-            let data = await fetch("@Config["url"]/recipes", {
+            let response = await fetch("@Config["url"]/recipes", {
                 method: "GET",
                 headers: {
                     "X-XSRF-TOKEN": antiforgery,
+                    "Authorization":"Bearer "+ localStorage.token,
                     "Content-Type": "application/json"
                 },
                 credentials: 'include'
-            })
-                .then(response => response.json())
+            });
+            let data = await response.json();
             data.forEach(recipe => {
                 recipe.ingredients = recipe.ingredients.split('\n');
                 recipe.instructions = recipe.instructions.split('\n');
@@ -627,15 +627,15 @@
 
         async function getCategories() {
             const antiforgery = await getTokenFromPage();
-            let categories = await fetch('@Config["url"]/categories', {
+            let response = await fetch('@Config["url"]/categories', {
                 method: 'GET',
                 headers: {
                     "X-XSRF-TOKEN": antiforgery,
                     "Content-Type": "application/json"
                 },
                 credentials: 'include'
-            })
-                .then(response => response.json());
+            });
+            let categories = await response.json();
             return categories;
         }
 
