@@ -1,20 +1,17 @@
-
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Server.Models;
-using Server.Utility;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
 var securityScheme = new OpenApiSecurityScheme()
 {
     Name = "Authorization",
@@ -22,7 +19,7 @@ var securityScheme = new OpenApiSecurityScheme()
     Scheme = "Bearer",
     BearerFormat = "JWT",
     In = ParameterLocation.Header,
-    Description = "JSON Web Token based security",
+    Description = "Home Recipes API secured with JWT",
 };
 
 var securityReq = new OpenApiSecurityRequirement()
@@ -39,23 +36,30 @@ var securityReq = new OpenApiSecurityRequirement()
         new string[] {}
     }
 };
+
+var contact = new OpenApiContact()
+{
+    Name = "Bassel Amgad",
+    Email = "bamgad7@gmail.com",
+    Url = new Uri("https://github.com/BasselAmgad")
+};
+
+var info = new OpenApiInfo()
+{
+    Version = "v1",
+    Title = "Home Recipes API secured with JWT",
+    Description = "Implementing JWT Authentication in Minimal API",
+    Contact = contact,
+};
+
+// Add services to the container.
 builder.Services.AddSwaggerGen(o =>
 {
+    o.SwaggerDoc("v1", info);
     o.AddSecurityDefinition("Bearer", securityScheme);
     o.AddSecurityRequirement(securityReq);
 });
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(name: "localhostOnly",
-                      policy =>
-                      {
-                          policy.WithOrigins(builder.Configuration["clientUrl"])
-                                .AllowAnyHeader()
-                                .AllowAnyMethod()
-                                .AllowCredentials();
-                      });
-});
 builder.Services.AddAuthentication(o =>
 {
     o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -65,132 +69,107 @@ builder.Services.AddAuthentication(o =>
 {
     o.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = false,
-        ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey
-            (Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+            (Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = false,
+        ValidateIssuerSigningKey = true
     };
 });
 
-builder.Services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: "client",
+                      policy =>
+                      {
+                          policy.WithOrigins(builder.Configuration["ClientUrl"])
+                                .AllowAnyHeader()
+                                .AllowAnyMethod()
+                                .AllowCredentials();
+                      });
+});
+
+builder.Services.AddControllers();
 builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
 builder.Services.AddSingleton<Data>();
-builder.Services.AddControllers();
 
 var app = builder.Build();
 
-
-app.UseSwagger();
-app.UseSwaggerUI();
-app.UseAuthorization();
-app.UseAuthentication();
-app.UseHttpsRedirection();
-app.UseCors("localhostOnly");
-
-app.UseSwaggerUI(options =>
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
 {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
-    options.RoutePrefix = string.Empty;
-});
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
-app.MapPost("/security/register", async (Data data, [FromBody] User newUser) =>
+app.MapPost("/register", async ([FromBody] User newUser) =>
 {
+    var data = new Data();
     var hasher = new PasswordHasher<User>();
     var usersList = await data.GetUsersAsync();
     if (usersList is null)
         throw new Exception("Could not deserialize users list");
     if (usersList.Find(x => x.UserName == newUser.UserName) != null)
         return Results.BadRequest("username already exists");
-    byte[] salt = RandomNumberGenerator.GetBytes(128 / 8);
-    // derive a 256-bit subkey (use HMACSHA256 with 100,000 iterations)
-    string hashedPassword = Convert.ToBase64String(KeyDerivation.Pbkdf2(
-        password: newUser.Password!,
-        salt: salt,
-        prf: KeyDerivationPrf.HMACSHA256,
-        iterationCount: 100000,
-        numBytesRequested: 256 / 8));
-    User newRegisteredUser = new User(newUser.UserName, hashedPassword, salt, string.Empty, string.Empty);
+    User newRegisteredUser = new User(newUser.UserName, "");
+    string hashedPassword = hasher.HashPassword(newRegisteredUser, newUser.Password);
+    newRegisteredUser.Password = hashedPassword;
     await data.AddUserAsync(newRegisteredUser);
     return Results.Ok();
 });
 
-app.MapPost("/security/login", [AllowAnonymous] async (Data data, [FromBody] User userLogin) =>
+app.MapPost("/login", [AllowAnonymous] async (User user) =>
 {
-    var hasher = new PasswordHasher<User>();
-    TokenService tokenService = new TokenService();
+    Data data = new();
+    var passwordHasher = new PasswordHasher<User>();
     var usersList = await data.GetUsersAsync();
     if (usersList is null)
         throw new Exception("Could not deserialize users list");
-    var user = usersList.FirstOrDefault(u => u.UserName == userLogin.UserName);
-    if (user is null)
-        return Results.Unauthorized();
-    var loginPasswordHash = hasher.VerifyHashedPassword(user, user.Password, userLogin.Password);
-    if (loginPasswordHash.Equals(0))
+    var userData = usersList.FirstOrDefault(u => u.UserName == user.UserName);
+    if (userData is null)
+        return Results.NotFound("User does not exist");
+    var verifyPassword = passwordHasher.VerifyHashedPassword(userData, userData.Password, user.Password);
+    if (verifyPassword == PasswordVerificationResult.Failed)
         return Results.Unauthorized();
     var issuer = builder.Configuration["Jwt:Issuer"];
     var audience = builder.Configuration["Jwt:Audience"];
-    var securityKey = new SymmetricSecurityKey
-        (Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]));
-    var credentials = new SigningCredentials(securityKey,
-        SecurityAlgorithms.HmacSha256);
-    var token = new JwtSecurityToken(
-        issuer: issuer,
-        expires: DateTime.Now.AddDays(3),
-        audience: audience,
-        signingCredentials: credentials
-        );
-    var tokenHandler = new JwtSecurityTokenHandler();
-    var stringToken = tokenHandler.WriteToken(token);
-    var refreshToken = tokenService.GenerateRefreshToken();
-    user.RefreshToken = refreshToken;
-    user.RefreshTokenExpiryTime = DateTime.Now.AddDays(7).ToString();
-    await data.SaveDataAsync();
-    return Results.Ok(new AuthenticatedResponse { RefreshToken = refreshToken, Token = stringToken, UserName = user.UserName });
-});
-
-app.MapPost("/security/createToken",
-[AllowAnonymous] (User user) =>
-{
-    var issuer = builder.Configuration["Jwt:Issuer"];
-    var audience = builder.Configuration["Jwt:Audience"];
-    var key = Encoding.ASCII.GetBytes
-    (builder.Configuration["Jwt:Key"]);
+    var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]));
+    var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+    var jwtTokenHandler = new JwtSecurityTokenHandler();
+    var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"]);
     var tokenDescriptor = new SecurityTokenDescriptor
     {
         Subject = new ClaimsIdentity(new[]
         {
-                new Claim("Id", Guid.NewGuid().ToString()),
+                new Claim("Id", userData.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
-                new Claim(JwtRegisteredClaimNames.Email, user.UserName),
-                new Claim(JwtRegisteredClaimNames.Jti,
-                Guid.NewGuid().ToString())
-             }),
-        Expires = DateTime.UtcNow.AddMinutes(5),
-        Issuer = issuer,
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            }),
+        // the life span of the token needs to be shorter and utilise refresh token to keep the user signedin
+        // but since this is a demo app we can extend it to fit our current need
+        Expires = DateTime.UtcNow.AddHours(6),
         Audience = audience,
-        SigningCredentials = new SigningCredentials
-        (new SymmetricSecurityKey(key),
-        SecurityAlgorithms.HmacSha512Signature)
+        Issuer = issuer,
+        // here we are adding the encryption alogorithim information which will be used to decrypt our token
+        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha512Signature)
     };
-    var tokenHandler = new JwtSecurityTokenHandler();
-    var token = tokenHandler.CreateToken(tokenDescriptor);
-    var jwtToken = tokenHandler.WriteToken(token);
-    var stringToken = tokenHandler.WriteToken(token);
-    return Results.Ok(stringToken);
+    var token = jwtTokenHandler.CreateToken(tokenDescriptor);
+    var jwtToken = jwtTokenHandler.WriteToken(token);
+    return Results.Ok(new AuthenticatedResponse { RefreshToken = "", Token = jwtToken, UserName = userData.UserName});
 });
 
 app.MapGet("/antiforgery", (IAntiforgery antiforgery, HttpContext context) =>
 {
     var tokens = antiforgery.GetAndStoreTokens(context);
-    context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!, new CookieOptions { HttpOnly = false });
+    context.Response.Cookies.Append("X-XSRF-TOKEN", tokens.RequestToken!, new CookieOptions { HttpOnly = false });
 });
 
-app.MapGet("/recipes", [Authorize] async (Data data, HttpContext context, IAntiforgery antiforgery) =>
+app.MapGet("/recipes",  async (IAntiforgery antiforgery,Data data, HttpContext context) =>
 {
     try
     {
@@ -349,4 +328,15 @@ app.MapDelete("/recipes/category", async (Data data, IAntiforgery antiforgery, H
     }
 });
 
+app.UseSwagger();
+app.UseSwaggerUI();
+app.UseCors("client");
+app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+
 app.Run();
+

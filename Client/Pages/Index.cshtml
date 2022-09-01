@@ -463,12 +463,8 @@
             {
                 userName: username,
                 password: password,
-                passwordSalt: "",
-                refreshToken: "",
-                refreshTokenExpireyTime: ""
-
             }
-            await fetch(`@Config["url"]/security/register`, {
+            await fetch(`@Config["url"]/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -531,26 +527,30 @@
             {
                 userName: username,
                 password: password,
-                passwordSalt: "",
-                refreshToken: "",
-                refreshTokenExpireyTime: ""
-
             }
-            var response = await fetch(`@Config["url"]/security/login`, {
+            var response = await fetch(`@Config["url"]/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     "X-XSRF-TOKEN": antiforgery,
-                    'Authorization': 'Bearer '+localStorage.getItem("token"),
+                    'Authorization': 'Bearer ' + localStorage.getItem("token"),
 
                 },
                 body: JSON.stringify(user),
             })
+            if (response.status === 404) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'User does not exist',
+                });
+                return false;
+            }
             if (response.status === 401) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Oops...',
-                    text: 'Incorrect username or password.',
+                    text: 'Incorrect username or password',
                 });
                 return false;
             }
@@ -565,7 +565,7 @@
             const responseJson = await response.json();
             localStorage.setItem('token', responseJson['token']);
             localStorage.setItem('refreshToken', responseJson['refreshToken']);
-            localStorage.setItem('username', responseJson['username']);
+            localStorage.setItem('userName', responseJson['username']);
             Swal.fire({
                 icon: 'success',
                 title: 'Logged In',
@@ -573,6 +573,7 @@
                 timer: 1500
             }).then(() => {
                 switchNavLogin(true);
+                window.location.reload(true);
                 return true;
             });
         }
@@ -601,7 +602,7 @@
         async function getTokenFromPage() {
             const xsrfToken = document.cookie
                 .split("; ")
-                .find(row => row.startsWith("XSRF-TOKEN="))
+                .find(row => row.startsWith("X-XSRF-TOKEN="))
                 .split("=")[1];
             return xsrfToken;
         }
@@ -612,7 +613,7 @@
                 method: "GET",
                 headers: {
                     "X-XSRF-TOKEN": antiforgery,
-                    "Authorization":"Bearer "+ localStorage.token,
+                    "Authorization": "Bearer " + localStorage.token,
                     "Content-Type": "application/json"
                 },
                 credentials: 'include'
@@ -631,6 +632,7 @@
                 method: 'GET',
                 headers: {
                     "X-XSRF-TOKEN": antiforgery,
+                    "Authorization": "Bearer " + localStorage.token,
                     "Content-Type": "application/json"
                 },
                 credentials: 'include'
@@ -645,6 +647,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    "Authorization": "Bearer " + localStorage.token,
                     "X-XSRF-TOKEN": antiforgery,
                 },
                 body: JSON.stringify(recipe),
@@ -665,6 +668,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    "Authorization": "Bearer " + localStorage.token,
                     "X-XSRF-TOKEN": antiforgery,
                 }
             })
@@ -684,6 +688,7 @@
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
+                    "Authorization": "Bearer " + localStorage.token,
                     "X-XSRF-TOKEN": antiforgery,
                 }
             })
@@ -703,6 +708,7 @@
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
+                    "Authorization": "Bearer " + localStorage.token,
                     "X-XSRF-TOKEN": antiforgery,
                 }
             })
@@ -722,6 +728,7 @@
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    "Authorization": "Bearer " + localStorage.token,
                     "X-XSRF-TOKEN": antiforgery,
                 },
                 body: JSON.stringify(recipe),
@@ -743,6 +750,7 @@
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    "Authorization": "Bearer " + localStorage.token,
                     "X-XSRF-TOKEN": antiforgery,
                 }
             })
