@@ -468,7 +468,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    "X-XSRF-TOKEN": antiforgery,
+
                 },
                 body: JSON.stringify(user),
             }).then((response) => {
@@ -492,17 +492,6 @@
                     return false;
                 }
             })
-        }
-
-        function switchNavLogin(login) {
-            if (login) {
-                document.getElementById("loginNavLink").classList.add("active");
-                document.getElementById("registerNavLink").classList.remove("active");
-            }
-            else {
-                document.getElementById("registerNavLink").classList.add("active");
-                document.getElementById("loginNavLink").classList.remove("active");
-            }
         }
 
         async function loginUser(username, password) {
@@ -532,7 +521,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    "X-XSRF-TOKEN": antiforgery,
+
                     'Authorization': 'Bearer ' + localStorage.getItem("token"),
 
                 },
@@ -555,41 +544,18 @@
                 return false;
             }
             if (response.status != 200) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Oops...',
-                    text: 'Something went wrong...',
-                });
+                swalError();
                 return false;
             }
             const responseJson = await response.json();
             localStorage.setItem('token', responseJson['token']);
             localStorage.setItem('refreshToken', responseJson['refreshToken']);
             localStorage.setItem('userName', responseJson['username']);
-            Swal.fire({
-                icon: 'success',
-                title: 'Logged In',
-                showConfirmButton: false,
-                timer: 1500
-            }).then(() => {
+            swalSuccesful("Logged In").then(() => {
                 switchNavLogin(true);
                 window.location.reload(true);
                 return true;
             });
-        }
-
-        function checkAuthenticated() {
-            if (localStorage.token) {
-                return true;
-            }
-            return false;
-        }
-
-        function logOut() {
-            localStorage.removeItem("token");
-            localStorage.removeItem("refreshToken");
-            localStorage.removeItem("username");
-            window.location.reload(true);
         }
 
         async function fetchToken() {
@@ -612,12 +578,16 @@
             let response = await fetch("@Config["url"]/recipes", {
                 method: "GET",
                 headers: {
-                    "X-XSRF-TOKEN": antiforgery,
+
                     "Authorization": "Bearer " + localStorage.token,
                     "Content-Type": "application/json"
                 },
                 credentials: 'include'
             });
+            if (response.statatus === 401) {
+                swalUnauthorized();
+                return [];
+            }
             let data = await response.json();
             data.forEach(recipe => {
                 recipe.ingredients = recipe.ingredients.split('\n');
@@ -631,138 +601,164 @@
             let response = await fetch('@Config["url"]/categories', {
                 method: 'GET',
                 headers: {
-                    "X-XSRF-TOKEN": antiforgery,
+
                     "Authorization": "Bearer " + localStorage.token,
                     "Content-Type": "application/json"
                 },
                 credentials: 'include'
             });
+            if (response.statatus === 401) {
+                swalUnauthorized();
+                return [];
+            }
             let categories = await response.json();
             return categories;
         }
 
         async function addRecipe(recipe) {
             const antiforgery = await getTokenFromPage();
-            await fetch(`@Config["url"]/recipes`, {
+            var response = await fetch(`@Config["url"]/recipes`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     "Authorization": "Bearer " + localStorage.token,
-                    "X-XSRF-TOKEN": antiforgery,
+
                 },
                 body: JSON.stringify(recipe),
-            })
-                .then(response =>
-                    response.json())
-                .then(data => {
-                    console.log('Success:', data);
-                })
-                .catch((error) => {
-                    console.error('Error:', error);
-                });
+            });
+            defaultResponse(response, "Recipe Added");
         }
 
         async function addCategory(category) {
             const antiforgery = await getTokenFromPage();
-            fetch(`@Config["url"]/categories?category=${category}`, {
+            var response = await fetch(`@Config["url"]/categories?category=${category}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     "Authorization": "Bearer " + localStorage.token,
-                    "X-XSRF-TOKEN": antiforgery,
+
                 }
-            })
-                .then(response =>
-                    response.json())
-                .then(data => {
-                    console.log('Success:', data);
-                })
-                .catch((error) => {
-                    console.error('Error:', error);
-                });
+            });
+            defaultResponse(response, "Category Added");
         }
 
         async function deleteRecipe(recipe) {
             const antiforgery = await getTokenFromPage();
-            fetch(`@Config["url"]/recipes/${recipe.id}`, {
+            var response = await fetch(`@Config["url"]/recipes/${recipe.id}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
                     "Authorization": "Bearer " + localStorage.token,
-                    "X-XSRF-TOKEN": antiforgery,
+
                 }
-            })
-                .then(response =>
-                    response.json())
-                .then(data => {
-                    console.log('Success:', data);
-                })
-                .catch((error) => {
-                    console.error('Error:', error);
-                });
+            });
+            defaultResponse(response, "Recipe Deleted");
         }
 
         async function deleteCategory(category) {
             const antiforgery = await getTokenFromPage();
-            fetch(`@Config["url"]/categories/?category=${category}`, {
+            var response = await fetch(`@Config["url"]/categories/?category=${category}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
                     "Authorization": "Bearer " + localStorage.token,
-                    "X-XSRF-TOKEN": antiforgery,
+
                 }
-            })
-                .then(response =>
-                    response.json())
-                .then(data => {
-                    console.log('Success:', data);
-                })
-                .catch((error) => {
-                    console.error('Error:', error);
-                });
+            });
+            defaultResponse(response, "Category Deleted");
         }
 
         async function editRecipe(recipe) {
             const antiforgery = await getTokenFromPage();
-            fetch(`@Config["url"]/recipes/${recipe.id}`, {
+            var response = await fetch(`@Config["url"]/recipes/${recipe.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     "Authorization": "Bearer " + localStorage.token,
-                    "X-XSRF-TOKEN": antiforgery,
+
                 },
                 body: JSON.stringify(recipe),
-            })
-                .then(response =>
-                    response.json())
-                .then(data => {
-                    console.log('Success:', data);
-                })
-                .catch((error) => {
-                    console.error('Error:', error);
-                });
+            });
+            defaultResponse(response, "Recipe Edited");
 
         }
 
         async function editCategory(category, newCategory) {
             const antiforgery = await getTokenFromPage();
-            fetch(`@Config["url"]/categories/?category=${category}&newCategory=${newCategory}`, {
+            var response = await fetch(`@Config["url"]/categories/?category=${category}&newCategory=${newCategory}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     "Authorization": "Bearer " + localStorage.token,
-                    "X-XSRF-TOKEN": antiforgery,
+
                 }
-            })
-                .then(response =>
-                    response.json())
-                .then(data => {
-                    console.log('Success:', data);
-                })
-                .catch((error) => {
-                    console.error('Error:', error);
-                });
+            });
+            defaultResponse(response, "Category Edited");
         }
+
+        function switchNavLogin(login) {
+            if (login) {
+                document.getElementById("loginNavLink").classList.add("active");
+                document.getElementById("registerNavLink").classList.remove("active");
+            }
+            else {
+                document.getElementById("registerNavLink").classList.add("active");
+                document.getElementById("loginNavLink").classList.remove("active");
+            }
+        }
+
+        function defaultResponse(response, action) {
+            if (response.status === 200) {
+                swalSuccesful(action)
+                    .then(window.location.reload(true));
+                return;
+            }
+            if (response.status === 401) {
+                swalUnauthorized();
+                return;
+            }
+            swalError();
+        }
+
+        function checkAuthenticated() {
+            if (localStorage.token) {
+                return true;
+            }
+            return false;
+        }
+
+        function logOut() {
+            localStorage.removeItem("token");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("username");
+            window.location.reload(true);
+        }
+
+        function swalSuccesful(action) {
+            Swal.fire({
+                icon: 'success',
+                title: `${action}`,
+                showConfirmButton: false,
+                timer: 1500
+            })
+        }
+
+        function swalUnauthorized() {
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'You do not have permission for the following action.',
+            });
+        }
+
+        function swalError() {
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Something went wrong...',
+            });
+        }
+
         window.onload = fetchToken;
     </script>
 </body>
