@@ -173,7 +173,7 @@ app.MapGet("/recipes",  async (IAntiforgery antiforgery,Data data, HttpContext c
 {
     try
     {
-        await antiforgery.ValidateRequestAsync(context);
+        //await antiforgery.ValidateRequestAsync(context);
         var recipes = await data.GetRecipesAsync();
         return Results.Ok(recipes);
     }
@@ -187,7 +187,7 @@ app.MapGet("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpCont
 {
     try
     {
-        await antiforgery.ValidateRequestAsync(context);
+        //await antiforgery.ValidateRequestAsync(context);
         Recipe recipe = await data.GetRecipeAsync(id);
         return Results.Ok(recipe);
     }
@@ -202,7 +202,7 @@ app.MapPost("/recipes", async (Data data, IAntiforgery antiforgery, HttpContext 
 {
     try
     {
-        await antiforgery.ValidateRequestAsync(context);
+        //await antiforgery.ValidateRequestAsync(context);
         recipe.Id = Guid.NewGuid();
         await data.AddRecipeAsync(recipe);
         return Results.Created($"/recipes/{recipe.Id}", recipe);
@@ -218,7 +218,7 @@ app.MapPut("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpCont
 {
     try
     {
-        await antiforgery.ValidateRequestAsync(context);
+        //await antiforgery.ValidateRequestAsync(context);
         var updatedRecipe = await data.EditRecipeAsync(id, newRecipe);
         return Results.Ok(updatedRecipe);
     }
@@ -233,7 +233,7 @@ app.MapDelete("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpC
 {
     try
     {
-        await antiforgery.ValidateRequestAsync(context);
+        //await antiforgery.ValidateRequestAsync(context);
         await data.RemoveRecipeAsync(id);
         return Results.Ok();
     }
@@ -248,7 +248,7 @@ app.MapGet("/categories", async (Data data, IAntiforgery antiforgery, HttpContex
 {
     try
     {
-        await antiforgery.ValidateRequestAsync(context);
+        //await antiforgery.ValidateRequestAsync(context);
         var categories = await data.GetCategoriesAsync();
         return Results.Ok(categories);
     }
@@ -262,7 +262,7 @@ app.MapPost("/categories", async (Data data, IAntiforgery antiforgery, HttpConte
 {
     try
     {
-        await antiforgery.ValidateRequestAsync(context);
+        //await antiforgery.ValidateRequestAsync(context);
         await data.AddCategoryAsync(category);
         return Results.Created($"/categories/{category}", category);
     }
@@ -276,7 +276,7 @@ app.MapPut("/categories", async (Data data, IAntiforgery antiforgery, HttpContex
 {
     try
     {
-        await antiforgery.ValidateRequestAsync(context);
+        //await antiforgery.ValidateRequestAsync(context);
         await data.EditCategoryAsync(category, newCategory);
         return Results.Ok($"Category ({category}) updated to ({newCategory})");
     }
@@ -290,7 +290,7 @@ app.MapDelete("/categories", async (Data data, IAntiforgery antiforgery, HttpCon
 {
     try
     {
-        await antiforgery.ValidateRequestAsync(context);
+        //await antiforgery.ValidateRequestAsync(context);
         await data.RemoveCategoryAsync(category);
         return Results.Ok();
     }
@@ -304,7 +304,7 @@ app.MapPost("/recipes/category", async (Data data, IAntiforgery antiforgery, Htt
 {
     try
     {
-        await antiforgery.ValidateRequestAsync(context);
+        //await antiforgery.ValidateRequestAsync(context);
         await data.AddCategoryToRecipeAsync(id, category);
         return Results.Created($"recipes/category/{category}", category);
     }
@@ -318,7 +318,7 @@ app.MapDelete("/recipes/category", async (Data data, IAntiforgery antiforgery, H
 {
     try
     {
-        await antiforgery.ValidateRequestAsync(context);
+        //await antiforgery.ValidateRequestAsync(context);
         await data.RemoveCategoryFromRecipeAsync(id, category);
         return Results.Ok();
     }
