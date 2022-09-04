@@ -97,13 +97,12 @@ builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
 builder.Services.AddSingleton<Data>();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-app.UseSwagger();
 app.UseSwaggerUI();
-
+app.UseSwagger();
 
 app.MapPost("/register", async ([FromBody] User newUser) =>
 {
@@ -326,8 +325,7 @@ app.MapDelete("/recipes/category", [Authorize] async (Data data, IAntiforgery an
     }
 });
 
-app.UseSwagger();
-app.UseSwaggerUI();
+
 app.UseCors("client");
 app.UseHttpsRedirection();
 
