@@ -101,11 +101,9 @@ builder.Services.AddSingleton<Data>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
+
 
 app.MapPost("/register", async ([FromBody] User newUser) =>
 {
@@ -169,7 +167,7 @@ app.MapGet("/antiforgery", (IAntiforgery antiforgery, HttpContext context) =>
     context.Response.Cookies.Append("X-XSRF-TOKEN", tokens.RequestToken!, new CookieOptions { HttpOnly = false });
 });
 
-app.MapGet("/recipes",  async (IAntiforgery antiforgery,Data data, HttpContext context) =>
+app.MapGet("/recipes", [Authorize] async (IAntiforgery antiforgery,Data data, HttpContext context) =>
 {
     try
     {
@@ -183,7 +181,7 @@ app.MapGet("/recipes",  async (IAntiforgery antiforgery,Data data, HttpContext c
     }
 });
 
-app.MapGet("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id) =>
+app.MapGet("/recipes/{id}", [Authorize] async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id) =>
 {
     try
     {
@@ -198,7 +196,7 @@ app.MapGet("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpCont
 
 });
 
-app.MapPost("/recipes", async (Data data, IAntiforgery antiforgery, HttpContext context, Recipe recipe) =>
+app.MapPost("/recipes", [Authorize] async (Data data, IAntiforgery antiforgery, HttpContext context, Recipe recipe) =>
 {
     try
     {
@@ -214,7 +212,7 @@ app.MapPost("/recipes", async (Data data, IAntiforgery antiforgery, HttpContext 
 
 });
 
-app.MapPut("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id, Recipe newRecipe) =>
+app.MapPut("/recipes/{id}", [Authorize] async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id, Recipe newRecipe) =>
 {
     try
     {
@@ -229,7 +227,7 @@ app.MapPut("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpCont
 
 });
 
-app.MapDelete("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id) =>
+app.MapDelete("/recipes/{id}", [Authorize] async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id) =>
 {
     try
     {
@@ -244,7 +242,7 @@ app.MapDelete("/recipes/{id}", async (Data data, IAntiforgery antiforgery, HttpC
 
 });
 
-app.MapGet("/categories", async (Data data, IAntiforgery antiforgery, HttpContext context) =>
+app.MapGet("/categories", [Authorize] async (Data data, IAntiforgery antiforgery, HttpContext context) =>
 {
     try
     {
@@ -258,7 +256,7 @@ app.MapGet("/categories", async (Data data, IAntiforgery antiforgery, HttpContex
     }
 });
 
-app.MapPost("/categories", async (Data data, IAntiforgery antiforgery, HttpContext context, string category) =>
+app.MapPost("/categories", [Authorize] async (Data data, IAntiforgery antiforgery, HttpContext context, string category) =>
 {
     try
     {
@@ -272,7 +270,7 @@ app.MapPost("/categories", async (Data data, IAntiforgery antiforgery, HttpConte
     }
 });
 
-app.MapPut("/categories", async (Data data, IAntiforgery antiforgery, HttpContext context, string category, string newCategory) =>
+app.MapPut("/categories", [Authorize] async (Data data, IAntiforgery antiforgery, HttpContext context, string category, string newCategory) =>
 {
     try
     {
@@ -286,7 +284,7 @@ app.MapPut("/categories", async (Data data, IAntiforgery antiforgery, HttpContex
     }
 });
 
-app.MapDelete("/categories", async (Data data, IAntiforgery antiforgery, HttpContext context, string category) =>
+app.MapDelete("/categories", [Authorize] async (Data data, IAntiforgery antiforgery, HttpContext context, string category) =>
 {
     try
     {
@@ -300,7 +298,7 @@ app.MapDelete("/categories", async (Data data, IAntiforgery antiforgery, HttpCon
     }
 });
 
-app.MapPost("/recipes/category", async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id, string category) =>
+app.MapPost("/recipes/category", [Authorize] async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id, string category) =>
 {
     try
     {
@@ -314,7 +312,7 @@ app.MapPost("/recipes/category", async (Data data, IAntiforgery antiforgery, Htt
     }
 });
 
-app.MapDelete("/recipes/category", async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id, string category) =>
+app.MapDelete("/recipes/category", [Authorize] async (Data data, IAntiforgery antiforgery, HttpContext context, Guid id, string category) =>
 {
     try
     {
