@@ -112,7 +112,7 @@
                                 <a class="nav-link dropdown-toggle" style="color:whitesmoke" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Recipes</a>
                                 <div class="dropdown-menu" x-data>
                                     <button class="dropdown-item" x-on:click="show = true">View Recipes</button>
-                                    <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#addRecipeModal">Add Recipe</button>
+                                    <button class="dropdown-item" data-bs-target="#addRecipeModal2" data-bs-toggle="modal">Add Recipe</button>
                                 </div>
                             </li>
                             <li class="nav-item dropdown">
@@ -145,84 +145,77 @@
                 }">
                     <template x-for="recipe in recipes">
                         <div x-data="{cardRecipe:{},init(){this.cardRecipe = recipes[index++]}}">
-                            <div class="">
-                                <div class="card card text-white bg-primary mb-3" x-bind:id="`heading_${recipe.id}`">
-                                    <div class="card-header">
-                                        <div class="d-grid">
-                                            <button class="btn btn-lg btn-primary" data-bs-toggle="collapse"
-                                                    x-bind:data-bs-target="`#collapse_${recipe.id}`"
-                                                    aria-expanded="false"
-                                                    x-bind:aria-controls="`collapse_${recipe.id}`">
-                                                <h4><span x-text="recipe.title"></span></h4>
-                                            </button>
-                                        </div>
-                                        <template x-for="category in recipe.categories">
-                                            <span style="font-size:12px; margin-top:5px; margin-right: 5px;" class="badge rounded-pill bg-light" x-text="category"></span>
-                                        </template>
-                                    </div>
-                                </div>
-                                <div x-bind:id="`collapse_${recipe.id}`" class="collapse"
-                                     x-bind:aria-labelledby="`heading_${recipe.id}`"
-                                     data-bs-parent="#accordion">
-                                    <div class="list-group">
-                                        <div class="card-body text-dark list-group-item">
-                                            <h5 class="card-title">Instructions</h5>
-                                            <ol class="list-group list-group-numbered">
-                                                <template x-for="instruction in recipe.instructions">
-                                                    <li class="list-group-item" x-text="instruction"></li>
-                                                </template>
-                                            </ol>
-                                        </div>
-                                        <div class="card-body text-dark list-group-item">
-                                            <h5 class="card-title">Ingredients</h5>
-                                            <ol class="list-group">
-                                                <template x-for="ingredient in recipe.ingredients">
-                                                    <ui class="list-group-item"><span x-text="ingredient"></span></ui>
-                                                </template>
-                                            </ol>
-                                        </div>
-                                        <button x-on:click="selectedRecipe = {...cardRecipe};
-                                                    selectedRecipe.ingredients=selectedRecipe.ingredients.join('\n');
-                                                    selectedRecipe.instructions=selectedRecipe.instructions.join('\n');"
-                                                data-bs-toggle="modal" data-bs-target="#editRecipeModal"
-                                                type="button" class="btn btn btn-secondary">
-                                            Edit
-                                        </button>
-                                        <button x-on:click="selectedRecipe={...cardRecipe}"
-                                                data-bs-toggle="modal" data-bs-target="#deleteRecipeModal"
-                                                type="button" class="btn btn btn-danger">
-                                            Delete
+                            <div class="card card text-white bg-primary mb-3" x-bind:id="`heading_${recipe.id}`">
+                                <div class="card-header">
+                                    <div class="d-grid">
+                                        <button class="btn btn-lg btn-primary" aria-expanded="false" x-on:click="selectedRecipe={...cardRecipe}"
+                                                data-bs-toggle="modal" data-bs-target="#viewRecipeModal">
+                                            <h4><span x-text="recipe.title"></span></h4>
                                         </button>
                                     </div>
+                                    <template x-for="category in recipe.categories">
+                                        <span style="font-size:12px; margin-top:5px; margin-right: 5px;" class="badge rounded-pill bg-light" x-text="category"></span>
+                                    </template>
                                 </div>
                             </div>
                         </div>
                     </template>
 
-                    @*Modal for Delete Recipe*@
-                    <div class="modal fade" id="deleteRecipeModal" tabindex="-1" aria-labelledby="deleteRecipeLabel" aria-hidden="true" x-transition>
-                        <div class="modal-dialog">
+                    @*View Recipe Modal*@
+                    <div class="modal fade" id="viewRecipeModal" tabindex="-1" aria-labelledby="viewRecipeLabel" aria-hidden="true" x-transition>
+                        <div class="modal-dialog modal-lg">
                             <div class="modal-content">
                                 <div class="modal-header">
-                                    <h5 class="modal-title" id="deleteRecipeLabel">Delete Recipe</h5>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
-                                    <form id="deleteRecipe-form" x-on:submit="await deleteRecipe(selectedRecipe)">
-                                        <p>Are you sure you want to delete <span x-text="selectedRecipe.title"></span></p>
-                                    </form>
+
+                                    <div class="list-group">
+                                        <div class="card-body text-dark list-group-item">
+                                            <h4 class="card-title text-center"><span x-text="selectedRecipe.title"></span></h4>
+                                            <template x-for="category in selectedRecipe.categories">
+                                                <span x-text="category" style="font-size:12px; margin-top:5px; margin-right: 5px;" class="badge rounded-pill bg-primary"></span>
+                                            </template>
+                                        </div>
+                                        <div class="card-body text-dark list-group-item">
+                                            <div class="container">
+                                                <div class="row">
+                                                    <div class="col-sm-3">
+                                                        <h5 class="card-title">Ingredients</h5>
+                                                        <ul class="list-group ">
+                                                            <template x-for="ingredient in selectedRecipe.ingredients">
+                                                                <li class="list-group-item"><span x-text="ingredient"></span></li>
+                                                            </template>
+                                                        </ul>
+                                                    </div>
+                                                    <div class="col">
+                                                        <h5 class="card-title">Instructions</h5>
+                                                        <ol class="list-group list-group-numbered">
+                                                            <template x-for="instruction in selectedRecipe.instructions">
+                                                                <li class="list-group-item"><span x-text="instruction"></span></li>
+                                                            </template>
+                                                        </ol>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                    <button type="submit" form="deleteRecipe-form" class="btn btn-danger">Delete</button>
+                                <div class="modal-footer text-center">
+                                    <button data-bs-target="#editRecipeModal" data-bs-toggle="modal" type="button" class="btn btn btn-secondary">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button data-bs-target="#deleteRecipeModal" data-bs-toggle="modal" type="button" class="btn btn btn-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    @*Modal for Edit Recipe*@
+                    @*Edit Recipe Modal*@
                     <div class="modal fade" id="editRecipeModal" tabindex="-1" aria-labelledby="editRecipeLabel" aria-hidden="true" x-transition>
-                        <div class="modal-dialog">
+                        <div class="modal-dialog modal-lg">
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h5 class="modal-title" id="editRecipeLabel">Edit Recipe</h5>
@@ -244,19 +237,19 @@
                                                 <label for="title-text" class="col-form-label">Title</label>
                                             </div>
                                             <div class="form-floating mb-3">
-                                                <textarea x-model="selectedRecipe.ingredients"
+                                                <textarea x-model="selectedRecipe.ingredients.join('\n')"
                                                           class="form-control" id="ingredients-text" minlength="5"></textarea>
                                                 <label for="ingredients-text" class="col-form-label">Ingredients</label>
                                             </div>
                                             <div class="form-floating mb-3">
-                                                <textarea x-model="selectedRecipe.instructions"
+                                                <textarea x-model="selectedRecipe.instructions.join('\n')"
                                                           class="form-control" id="Instructions-text" minlength="5"></textarea>
                                                 <label for="instructions-text" class="col-form-label">Instructions</label>
                                             </div>
                                             <div>
                                                 <label class="col-form-label">Categories</label>
                                                 <select x-model="selectedRecipe.categories" id="categoriesSelect"
-                                                        class="form-select" multiple aria-label="multiple select example">
+                                                        class="form-select" multiple>
                                                     <template x-for="category in allCategories">
                                                         <option x-bind:value="category" x-bind:selected="selectedRecipe.categories.includes(category)?true:false"
                                                                 x-bind:label="category"></option>
@@ -267,13 +260,83 @@
                                     </div>
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                                     <button type="submit" form="editRecipe-form" class="btn btn-danger">Edit</button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
+                    @*Delete Recipe Modal*@
+                    <div class="modal fade" id="deleteRecipeModal" tabindex="-1" aria-labelledby="deleteRecipeLabel" aria-hidden="true" x-transition>
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="deleteRecipeLabel">Delete Recipe</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <form id="deleteRecipe-form" x-on:submit="await deleteRecipe(selectedRecipe)">
+                                        <p>Are you sure you want to delete <span x-text="selectedRecipe.title"></span></p>
+                                    </form>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="submit" form="deleteRecipe-form" class="btn btn-danger">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @*Add Recipe Modal*@
+            <div class="modal fade" id="addRecipeModal2" tabindex="-1" aria-labelledby="addRecipeLabel" aria-hidden="true" x-transition>
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="addRecipeLabel">Add Recipe</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div x-data="
+                         {
+                         allCategories:[],
+                         recipe:{Title:'',Ingredients:'',Instructions:'',Categories:[]},
+                         async init() {this.allCategories = await getCategories();}
+                        }">
+                                <form id="addRecipe-form"
+                                      x-on:submit="await addRecipe(recipe);">
+                                    <div class="form-floating mb-3">
+                                        <input x-model="recipe.Title" type="text" class="form-control" id="title-text" placeholder="Scrambled Eggs">
+                                        <label for="title-text" class="col-form-label">Title</label>
+                                    </div>
+                                    <div class="form-floating mb-3">
+                                        <textarea x-model="recipe.Ingredients"
+                                                  class="form-control" id="ingredients-text" minlength="5"></textarea>
+                                        <label for="ingredients-text" class="col-form-label">Ingredients</label>
+                                    </div>
+                                    <div class="form-floating mb-3">
+                                        <textarea x-model="recipe.Instructions"
+                                                  class="form-control" id="Instructions-text" minlength="5"></textarea>
+                                        <label for="instructions-text" class="col-form-label">Instructions</label>
+                                    </div>
+                                    <div>
+                                        <label class="col-form-label">Categories</label>
+                                        <select x-model="recipe.Categories" id="categoriesSelect"
+                                                class="form-select" multiple>
+                                            <template x-for="category in allCategories">
+                                                <option x-bind:value="category" x-bind:label="category"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" form="addRecipe-form" class="btn btn-primary">Add</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -354,14 +417,16 @@
                     </div>
                 </div>
             </div>
+
+
         </div>
 
         @*Modal for Add Recipe*@
-        <div class="modal fade" id="addRecipeModal" tabindex="-1" aria-labelledby="addRecipeModalLabel" aria-hidden="true" x-transition>
+        <div class="modal fade" id="addRecipeModal2" tabindex="-1" aria-labelledby="addRecipeLabel" aria-hidden="true" x-transition>
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="exampleModalLabel">Add Recipe</h5>
+                        <h5 class="modal-title" id="addRecipeLabel">Add Recipe</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
@@ -390,7 +455,7 @@
                                 <div>
                                     <label class="col-form-label">Categories</label>
                                     <select x-model="recipe.Categories" id="categoriesSelect"
-                                            class="form-select" multiple aria-label="multiple select example">
+                                            class="form-select" multiple>
                                         <template x-for="category in allCategories">
                                             <option x-bind:value="category" x-bind:label="category"></option>
                                         </template>
@@ -406,13 +471,12 @@
                 </div>
             </div>
         </div>
-
-        @*Modal for Add Category*@
-        <div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true" x-transition>
+        @*Add Category Modal*@
+        <div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryLabel" aria-hidden="true" x-transition>
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Add Category</h5>
+                        <h5 id="addCategoryLabel" class="modal-title">Add Category</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
@@ -434,6 +498,7 @@
                 </div>
             </div>
         </div>
+        
     </template>
 
 
@@ -551,11 +616,8 @@
             localStorage.setItem('token', responseJson['token']);
             localStorage.setItem('refreshToken', responseJson['refreshToken']);
             localStorage.setItem('userName', responseJson['username']);
-            swalSuccesful("Logged In").then(() => {
-                switchNavLogin(true);
-                window.location.reload(true);
-                return true;
-            });
+            swalSuccesful("Logged In");
+            return true;
         }
 
         async function fetchToken() {
@@ -740,7 +802,9 @@
                 title: `${action}`,
                 showConfirmButton: false,
                 timer: 1500
-            })
+            }).then(() => {
+                window.location.reload(true)
+            });
         }
 
         function swalUnauthorized() {
