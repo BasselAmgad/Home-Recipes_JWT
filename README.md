@@ -4,7 +4,7 @@
 ![image](https://user-images.githubusercontent.com/15571269/180087667-d1aaf56b-34f1-4310-a85e-9dc6feea0d2b.png)
 
 ## Project Overview
-- The purpose of this project was for me to learn how can I authorize my Minimal Dotnet core API.
+- The purpose of this project was for me to learn how can I add authorization my Minimal Dotnet core API.
 
 ## The project uses the following
 - [JWT Authorization](https://learn.microsoft.com/en-us/aspnet/core/security/authorization/limitingidentitybyscheme?view=aspnetcore-6.0)
